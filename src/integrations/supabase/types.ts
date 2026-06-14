@@ -14,16 +14,216 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      payments: {
+        Row: {
+          admin_notes: string | null
+          amount_zar: number
+          approved_at: string | null
+          created_at: string
+          id: string
+          plan: Database["public"]["Enums"]["plan_tier"]
+          proof_url: string
+          reference: string | null
+          status: Database["public"]["Enums"]["payment_status"]
+          vendor_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          amount_zar: number
+          approved_at?: string | null
+          created_at?: string
+          id?: string
+          plan: Database["public"]["Enums"]["plan_tier"]
+          proof_url: string
+          reference?: string | null
+          status?: Database["public"]["Enums"]["payment_status"]
+          vendor_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          amount_zar?: number
+          approved_at?: string | null
+          created_at?: string
+          id?: string
+          plan?: Database["public"]["Enums"]["plan_tier"]
+          proof_url?: string
+          reference?: string | null
+          status?: Database["public"]["Enums"]["payment_status"]
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          ai_review_notes: string | null
+          ai_risk_score: number | null
+          category: string
+          created_at: string
+          description: string
+          id: string
+          image_url: string | null
+          price_zar: number
+          rejection_reason: string | null
+          status: Database["public"]["Enums"]["product_status"]
+          title: string
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          ai_review_notes?: string | null
+          ai_risk_score?: number | null
+          category: string
+          created_at?: string
+          description: string
+          id?: string
+          image_url?: string | null
+          price_zar: number
+          rejection_reason?: string | null
+          status?: Database["public"]["Enums"]["product_status"]
+          title: string
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          ai_review_notes?: string | null
+          ai_risk_score?: number | null
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          image_url?: string | null
+          price_zar?: number
+          rejection_reason?: string | null
+          status?: Database["public"]["Enums"]["product_status"]
+          title?: string
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      vendors: {
+        Row: {
+          ai_review_notes: string | null
+          ai_risk_score: number | null
+          business_description: string
+          business_name: string
+          category: string
+          city: string
+          created_at: string
+          email: string
+          id: string
+          logo_url: string | null
+          owner_name: string
+          plan: Database["public"]["Enums"]["plan_tier"]
+          plan_active_until: string | null
+          province: string
+          rejection_reason: string | null
+          status: Database["public"]["Enums"]["vendor_status"]
+          updated_at: string
+          whatsapp_number: string
+        }
+        Insert: {
+          ai_review_notes?: string | null
+          ai_risk_score?: number | null
+          business_description: string
+          business_name: string
+          category: string
+          city: string
+          created_at?: string
+          email: string
+          id: string
+          logo_url?: string | null
+          owner_name: string
+          plan?: Database["public"]["Enums"]["plan_tier"]
+          plan_active_until?: string | null
+          province: string
+          rejection_reason?: string | null
+          status?: Database["public"]["Enums"]["vendor_status"]
+          updated_at?: string
+          whatsapp_number: string
+        }
+        Update: {
+          ai_review_notes?: string | null
+          ai_risk_score?: number | null
+          business_description?: string
+          business_name?: string
+          category?: string
+          city?: string
+          created_at?: string
+          email?: string
+          id?: string
+          logo_url?: string | null
+          owner_name?: string
+          plan?: Database["public"]["Enums"]["plan_tier"]
+          plan_active_until?: string | null
+          province?: string
+          rejection_reason?: string | null
+          status?: Database["public"]["Enums"]["vendor_status"]
+          updated_at?: string
+          whatsapp_number?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      plan_product_limit: {
+        Args: { _plan: Database["public"]["Enums"]["plan_tier"] }
+        Returns: number
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "vendor"
+      payment_status: "pending" | "approved" | "rejected"
+      plan_tier: "none" | "starter" | "growth" | "unlimited"
+      product_status: "pending" | "approved" | "rejected"
+      vendor_status: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +350,12 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "vendor"],
+      payment_status: ["pending", "approved", "rejected"],
+      plan_tier: ["none", "starter", "growth", "unlimited"],
+      product_status: ["pending", "approved", "rejected"],
+      vendor_status: ["pending", "approved", "rejected"],
+    },
   },
 } as const
