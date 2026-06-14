@@ -67,6 +67,22 @@ function ClaimAdmin({ email }: { email: string }) {
       toast.success("You are now admin! Reloading…");
       setTimeout(() => window.location.reload(), 600);
     } catch (e: any) {
+      toast.error(e.message ?? "You don't have admin access.");
+    } finally { setLoading(false); }
+  };
+  return (
+    <>
+      <ShieldCheck className="h-12 w-12 mx-auto text-[color:var(--deal)] mb-3" />
+      <h1 className="font-display text-2xl font-bold">Admin access</h1>
+      <p className="text-muted-foreground mt-2">If you're the first admin (boss/CEO), claim it now for <strong className="text-foreground">{email}</strong>. Once an admin exists, only existing admins can add more.</p>
+      <Button onClick={claim} disabled={loading} className="mt-6 bg-[var(--deal)] hover:bg-[var(--deal)]/90 text-[color:var(--deal-foreground)]">
+        {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Claim admin
+      </Button>
+    </>
+  );
+}
+      setTimeout(() => window.location.reload(), 600);
+    } catch (e: any) {
       toast.error(e.message ?? "Failed");
     } finally { setLoading(false); }
   };
