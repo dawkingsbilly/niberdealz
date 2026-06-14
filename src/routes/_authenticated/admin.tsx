@@ -27,16 +27,7 @@ function Admin() {
       <div className="min-h-screen flex flex-col">
         <SiteHeader />
         <div className="flex-1 container mx-auto px-4 py-16 max-w-lg text-center">
-          {adminBootstrap?.hasAdmin === false ? (
-            <ClaimAdmin email={user?.email ?? ""} />
-          ) : (
-            <>
-              <ShieldCheck className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-              <h1 className="font-display text-2xl font-bold">Admin only</h1>
-              <p className="text-muted-foreground mt-2">You don't have admin access.</p>
-              <Button asChild className="mt-6"><Link to="/dashboard">Back to dashboard</Link></Button>
-            </>
-          )}
+          <ClaimAdmin email={user?.email ?? ""} />
         </div>
         <SiteFooter />
       </div>
