@@ -67,9 +67,12 @@ function RegisterShop() {
     setLoading(true);
     try {
       const res = await submit({ data: form });
-      toast.success("Registration submitted! Check your email for confirmation.");
-      // Show result screen
-      navigate({ to: "/dashboard", search: { welcome: 1, status: res.status } as any });
+      toast.success(
+        res.status === "approved" ? "Approved! Welcome to Niber-Dealz." :
+        res.status === "rejected" ? "Registration was auto-rejected by our safety check." :
+        "Registration submitted! Our team is reviewing it."
+      );
+      navigate({ to: "/dashboard" });
     } catch (e: any) {
       toast.error(e.message ?? "Submission failed");
     } finally {
