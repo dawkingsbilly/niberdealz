@@ -20,16 +20,6 @@ function Admin() {
 
   const isAdmin = roles.includes("admin");
 
-  // Bootstrap: if no admins exist, allow this signed-in user to claim it
-  const { data: adminBootstrap } = useQuery({
-    queryKey: ["admin-bootstrap"],
-    enabled: !!user && !isLoading && !isAdmin,
-    queryFn: async () => {
-      const { count } = await supabase.from("user_roles").select("*", { count: "exact", head: true }).eq("role", "admin");
-      return { hasAdmin: (count ?? 0) > 0 };
-    },
-  });
-
   if (isLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>;
 
   if (!isAdmin) {
