@@ -81,22 +81,6 @@ function ClaimAdmin({ email }: { email: string }) {
     </>
   );
 }
-      setTimeout(() => window.location.reload(), 600);
-    } catch (e: any) {
-      toast.error(e.message ?? "Failed");
-    } finally { setLoading(false); }
-  };
-  return (
-    <>
-      <ShieldCheck className="h-12 w-12 mx-auto text-[color:var(--deal)] mb-3" />
-      <h1 className="font-display text-2xl font-bold">Claim admin access</h1>
-      <p className="text-muted-foreground mt-2">No admin exists yet. As the first signed-in user, you can claim admin for <strong className="text-foreground">{email}</strong>.</p>
-      <Button onClick={claim} disabled={loading} className="mt-6 bg-[var(--deal)] hover:bg-[var(--deal)]/90 text-[color:var(--deal-foreground)]">
-        {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Claim admin
-      </Button>
-    </>
-  );
-}
 
 function VendorsTab({ qc }: { qc: ReturnType<typeof useQueryClient> }) {
   const action = useServerFn(adminVendorAction);
