@@ -66,12 +66,15 @@ export type Database = {
           ai_review_notes: string | null
           ai_risk_score: number | null
           category: string
+          color: string | null
           created_at: string
           description: string
           id: string
           image_url: string | null
+          is_sold: boolean
           price_zar: number
           rejection_reason: string | null
+          size: string | null
           status: Database["public"]["Enums"]["product_status"]
           title: string
           updated_at: string
@@ -81,12 +84,15 @@ export type Database = {
           ai_review_notes?: string | null
           ai_risk_score?: number | null
           category: string
+          color?: string | null
           created_at?: string
           description: string
           id?: string
           image_url?: string | null
+          is_sold?: boolean
           price_zar: number
           rejection_reason?: string | null
+          size?: string | null
           status?: Database["public"]["Enums"]["product_status"]
           title: string
           updated_at?: string
@@ -96,12 +102,15 @@ export type Database = {
           ai_review_notes?: string | null
           ai_risk_score?: number | null
           category?: string
+          color?: string | null
           created_at?: string
           description?: string
           id?: string
           image_url?: string | null
+          is_sold?: boolean
           price_zar?: number
           rejection_reason?: string | null
+          size?: string | null
           status?: Database["public"]["Enums"]["product_status"]
           title?: string
           updated_at?: string
@@ -219,7 +228,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "vendor"
+      app_role: "admin" | "vendor" | "owner"
       payment_status: "pending" | "approved" | "rejected"
       plan_tier: "none" | "starter" | "growth" | "unlimited"
       product_status: "pending" | "approved" | "rejected"
@@ -351,7 +360,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "vendor"],
+      app_role: ["admin", "vendor", "owner"],
       payment_status: ["pending", "approved", "rejected"],
       plan_tier: ["none", "starter", "growth", "unlimited"],
       product_status: ["pending", "approved", "rejected"],
