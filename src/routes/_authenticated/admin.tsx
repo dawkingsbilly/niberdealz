@@ -3,270 +3,219 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Check, X, ShieldCheck, AlertTriangle, Eye, UserPlus, Loader2 } from "lucide-react";
+import { Trash2, ShieldCheck, Loader2, Crown, Users, Store } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SiteHeader, SiteFooter } from "@/components/site-header";
-import { adminVendorAction, adminProductAction, adminPaymentAction, promoteToAdmin } from "@/lib/marketplace.functions";
+import { adminDeleteProduct, ownerDeleteVendor, ownerListUsers, promoteToRole } from "@/lib/marketplace.functions";
+import { CEO_EMAIL } from "@/lib/constants";
 
 export const Route = createFileRoute("/_authenticated/admin")({ component: Admin });
 
 function Admin() {
   const { user, roles, isLoading } = useAuth();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<"vendors" | "products" | "payments" | "admins">("vendors");
+  const [tab, setTab] = useState<"listings" | "stores" | "users" | "admins">("listings");
 
   const isAdmin = roles.includes("admin");
+  const isOwner = roles.includes("owner");
 
   if (isLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>;
 
-  if (!isAdmin) {
+  if (!isAdmin && !isOwner) {
     return (
       <div className="min-h-screen flex flex-col">
         <SiteHeader />
         <div className="flex-1 container mx-auto px-4 py-16 max-w-lg text-center">
-          <ClaimAdmin email={user?.email ?? ""} />
+          <ClaimAccess email={user?.email ?? ""} />
         </div>
         <SiteFooter />
       </div>
     );
   }
 
+  const tabs = isOwner
+    ? (["listings", "stores", "users", "admins"] as const)
+    : (["listings"] as const);
+
   return (
     <div className="min-h-screen flex flex-col">
       <SiteHeader />
       <div className="container mx-auto px-4 py-8 flex-1 max-w-6xl">
-        <h1 className="font-display text-3xl font-bold mb-1 flex items-center gap-2"><ShieldCheck className="h-7 w-7 text-[color:var(--deal)]" />Admin</h1>
-        <p className="text-muted-foreground mb-6">Approve vendors, review products, verify payments.</p>
+        <h1 className="font-display text-3xl font-bold mb-1 flex items-center gap-2">
+          {isOwner ? <Crown className="h-7 w-7 text-amber-500" /> : <ShieldCheck className="h-7 w-7 text-[color:var(--deal)]" />}
+          {isOwner ? "Owner panel" : "Admin"}
+        </h1>
+        <p className="text-muted-foreground mb-6">
+          {isOwner ? "Manage users, stores and listings on Niberdealz." : "Remove inappropriate listings."}
+        </p>
 
         <div className="flex gap-2 mb-6 border-b border-border overflow-x-auto">
-          {(["vendors", "products", "payments", "admins"] as const).map((t) => (
+          {tabs.map((t) => (
             <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm font-semibold border-b-2 -mb-px capitalize transition ${tab === t ? "border-[var(--deal)] text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}>{t}</button>
           ))}
         </div>
 
-        {tab === "vendors" && <VendorsTab qc={qc} />}
-        {tab === "products" && <ProductsTab qc={qc} />}
-        {tab === "payments" && <PaymentsTab qc={qc} />}
-        {tab === "admins" && <AdminsTab />}
+        {tab === "listings" && <ListingsTab qc={qc} />}
+        {tab === "stores" && isOwner && <StoresTab qc={qc} />}
+        {tab === "users" && isOwner && <UsersTab />}
+        {tab === "admins" && isOwner && <AdminsTab />}
       </div>
       <SiteFooter />
     </div>
   );
 }
 
-function ClaimAdmin({ email }: { email: string }) {
-  const promote = useServerFn(promoteToAdmin);
-  const [loading, setLoading] = useState(false);
-  const claim = async () => {
-    setLoading(true);
+function ClaimAccess({ email }: { email: string }) {
+  const promote = useServerFn(promoteToRole);
+  const [loading, setLoading] = useState<"owner" | "admin" | null>(null);
+  const claim = async (role: "owner" | "admin") => {
+    setLoading(role);
     try {
-      await promote({ data: { email } });
-      toast.success("You are now admin! Reloading…");
+      await promote({ data: { email, role } });
+      toast.success(`You are now ${role}! Reloading…`);
       setTimeout(() => window.location.reload(), 600);
     } catch (e: any) {
-      toast.error(e.message ?? "You don't have admin access.");
-    } finally { setLoading(false); }
+      toast.error(e.message ?? "Access denied.");
+    } finally { setLoading(null); }
   };
+  const isCeo = email.toLowerCase() === CEO_EMAIL.toLowerCase();
   return (
     <>
-      <ShieldCheck className="h-12 w-12 mx-auto text-[color:var(--deal)] mb-3" />
-      <h1 className="font-display text-2xl font-bold">Admin access</h1>
-      <p className="text-muted-foreground mt-2">If you're the first admin (boss/CEO), claim it now for <strong className="text-foreground">{email}</strong>. Once an admin exists, only existing admins can add more.</p>
-      <Button onClick={claim} disabled={loading} className="mt-6 bg-[var(--deal)] hover:bg-[var(--deal)]/90 text-[color:var(--deal-foreground)]">
-        {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Claim admin
-      </Button>
-    </>
-  );
-}
-
-function VendorsTab({ qc }: { qc: ReturnType<typeof useQueryClient> }) {
-  const action = useServerFn(adminVendorAction);
-  const [filter, setFilter] = useState<"pending" | "approved" | "rejected" | "all">("pending");
-  const { data: vendors = [] } = useQuery({
-    queryKey: ["admin-vendors", filter],
-    queryFn: async () => {
-      let q = supabase.from("vendors").select("*").order("created_at", { ascending: false });
-      if (filter !== "all") q = q.eq("status", filter);
-      const { data } = await q; return data ?? [];
-    },
-  });
-
-  const act = async (id: string, type: "approve" | "reject") => {
-    const reason = type === "reject" ? prompt("Reason for rejection?") ?? undefined : undefined;
-    try { await action({ data: { vendor_id: id, action: type, reason } }); toast.success(`Vendor ${type}d`); qc.invalidateQueries({ queryKey: ["admin-vendors"] }); }
-    catch (e: any) { toast.error(e.message); }
-  };
-
-  return (
-    <>
-      <FilterRow value={filter} onChange={setFilter} />
-      {vendors.length === 0 ? <Empty label="vendors" /> : (
-        <div className="space-y-3">
-          {vendors.map((v: any) => (
-            <div key={v.id} className="rounded-xl bg-card border border-border p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold">{v.business_name} <span className="text-xs text-muted-foreground font-normal">· {v.owner_name}</span></div>
-                  <div className="text-xs text-muted-foreground">{v.email} · {v.whatsapp_number} · {v.city}, {v.province} · {v.category}</div>
-                  <p className="text-sm mt-2">{v.business_description}</p>
-                  {typeof v.ai_risk_score === "number" && (
-                    <div className="mt-2 text-xs flex items-center gap-2">
-                      <AlertTriangle className="h-3.5 w-3.5 text-warning" />
-                      AI risk: <strong>{v.ai_risk_score}/100</strong> — {v.ai_review_notes}
-                    </div>
-                  )}
-                </div>
-                <StatusBadge status={v.status} />
-              </div>
-              {v.status === "pending" && (
-                <div className="mt-3 flex gap-2 justify-end">
-                  <Button size="sm" variant="outline" onClick={() => act(v.id, "reject")}><X className="h-4 w-4 mr-1" />Reject</Button>
-                  <Button size="sm" onClick={() => act(v.id, "approve")} className="bg-success hover:bg-success/90 text-success-foreground"><Check className="h-4 w-4 mr-1" />Approve</Button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+      <Crown className="h-12 w-12 mx-auto text-amber-500 mb-3" />
+      <h1 className="font-display text-2xl font-bold">Owner / Admin access</h1>
+      <p className="text-muted-foreground mt-2">Signed in as <strong className="text-foreground">{email}</strong>.</p>
+      {isCeo && (
+        <Button onClick={() => claim("owner")} disabled={loading !== null} className="mt-6 bg-amber-500 hover:bg-amber-500/90 text-white">
+          {loading === "owner" && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Claim CEO / Owner
+        </Button>
       )}
+      <p className="text-xs text-muted-foreground mt-4">Only the owner can promote new admins.</p>
     </>
   );
 }
 
-function ProductsTab({ qc }: { qc: ReturnType<typeof useQueryClient> }) {
-  const action = useServerFn(adminProductAction);
-  const [filter, setFilter] = useState<"pending" | "approved" | "rejected" | "all">("pending");
+function ListingsTab({ qc }: { qc: ReturnType<typeof useQueryClient> }) {
+  const del = useServerFn(adminDeleteProduct);
   const { data: products = [] } = useQuery({
-    queryKey: ["admin-products", filter],
+    queryKey: ["admin-products"],
     queryFn: async () => {
-      let q = supabase.from("products").select("*, vendors(business_name)").order("created_at", { ascending: false });
-      if (filter !== "all") q = q.eq("status", filter);
-      const { data } = await q; return data ?? [];
-    },
-  });
-  const act = async (id: string, type: "approve" | "reject") => {
-    const reason = type === "reject" ? prompt("Reason?") ?? undefined : undefined;
-    try { await action({ data: { product_id: id, action: type, reason } }); toast.success(`Product ${type}d`); qc.invalidateQueries({ queryKey: ["admin-products"] }); }
-    catch (e: any) { toast.error(e.message); }
-  };
-  return (
-    <>
-      <FilterRow value={filter} onChange={setFilter} />
-      {products.length === 0 ? <Empty label="products" /> : (
-        <div className="grid sm:grid-cols-2 gap-3">
-          {products.map((p: any) => (
-            <div key={p.id} className="rounded-xl bg-card border border-border p-4 flex gap-3">
-              <div className="h-20 w-20 rounded-lg bg-muted overflow-hidden shrink-0">{p.image_url && <img src={p.image_url} alt="" className="h-full w-full object-cover" />}</div>
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold line-clamp-1">{p.title}</div>
-                <div className="text-xs text-muted-foreground">{p.vendors?.business_name} · R{p.price_zar} · {p.category}</div>
-                <p className="text-xs mt-1 line-clamp-2 text-foreground/70">{p.description}</p>
-                <div className="mt-2 flex items-center justify-between gap-2">
-                  <StatusBadge status={p.status} />
-                  {p.status === "pending" && (
-                    <div className="flex gap-1">
-                      <Button size="sm" variant="outline" onClick={() => act(p.id, "reject")}><X className="h-3 w-3" /></Button>
-                      <Button size="sm" onClick={() => act(p.id, "approve")} className="bg-success hover:bg-success/90 text-success-foreground"><Check className="h-3 w-3" /></Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </>
-  );
-}
-
-function PaymentsTab({ qc }: { qc: ReturnType<typeof useQueryClient> }) {
-  const action = useServerFn(adminPaymentAction);
-  const { data: payments = [] } = useQuery({
-    queryKey: ["admin-payments"],
-    queryFn: async () => {
-      const { data } = await supabase.from("payments").select("*, vendors(business_name, email)").order("created_at", { ascending: false });
+      const { data } = await supabase.from("products").select("*, vendors(business_name)").order("created_at", { ascending: false }).limit(200);
       return data ?? [];
     },
   });
-
-  const viewProof = async (path: string) => {
-    const { data, error } = await supabase.storage.from("payment-proofs").createSignedUrl(path, 300);
-    if (error) toast.error(error.message); else window.open(data.signedUrl, "_blank");
-  };
-  const act = async (id: string, type: "approve" | "reject") => {
-    const notes = type === "reject" ? prompt("Notes?") ?? undefined : undefined;
-    try { await action({ data: { payment_id: id, action: type, notes } }); toast.success(`Payment ${type}d` + (type === "approve" ? " — plan activated" : "")); qc.invalidateQueries({ queryKey: ["admin-payments"] }); }
+  const remove = async (id: string) => {
+    if (!confirm("Remove this listing?")) return;
+    try { await del({ data: { product_id: id } }); toast.success("Removed"); qc.invalidateQueries({ queryKey: ["admin-products"] }); }
     catch (e: any) { toast.error(e.message); }
   };
-
+  if (products.length === 0) return <Empty label="listings" />;
   return (
-    <>
-      {payments.length === 0 ? <Empty label="payments" /> : (
-        <div className="space-y-3">
-          {payments.map((p: any) => (
-            <div key={p.id} className="rounded-xl bg-card border border-border p-4 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <div className="font-semibold">{p.vendors?.business_name} <span className="text-xs text-muted-foreground font-normal">{p.vendors?.email}</span></div>
-                <div className="text-sm">R{p.amount_zar} · <span className="capitalize">{p.plan}</span> plan · ref: {p.reference ?? "—"}</div>
-                <div className="text-xs text-muted-foreground">{new Date(p.created_at).toLocaleString()}</div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button size="sm" variant="outline" onClick={() => viewProof(p.proof_url)}><Eye className="h-3.5 w-3.5 mr-1" />Proof</Button>
-                <StatusBadge status={p.status} />
-                {p.status === "pending" && (
-                  <>
-                    <Button size="sm" variant="outline" onClick={() => act(p.id, "reject")}><X className="h-4 w-4" /></Button>
-                    <Button size="sm" onClick={() => act(p.id, "approve")} className="bg-success hover:bg-success/90 text-success-foreground"><Check className="h-4 w-4" /></Button>
-                  </>
-                )}
-              </div>
+    <div className="grid sm:grid-cols-2 gap-3">
+      {products.map((p: any) => (
+        <div key={p.id} className="rounded-xl bg-card border border-border p-3 flex gap-3">
+          <div className="h-20 w-20 rounded-lg bg-muted overflow-hidden shrink-0">{p.image_url && <img src={p.image_url} alt="" className="h-full w-full object-cover" />}</div>
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold line-clamp-1">{p.title}</div>
+            <div className="text-xs text-muted-foreground truncate">{p.vendors?.business_name} · R{p.price_zar} · {p.category}</div>
+            <p className="text-xs mt-1 line-clamp-2 text-foreground/70">{p.description}</p>
+            <div className="mt-2 flex justify-end">
+              <Button size="sm" variant="outline" onClick={() => remove(p.id)}><Trash2 className="h-3.5 w-3.5 mr-1" /> Remove</Button>
             </div>
-          ))}
+          </div>
         </div>
-      )}
-    </>
+      ))}
+    </div>
+  );
+}
+
+function StoresTab({ qc }: { qc: ReturnType<typeof useQueryClient> }) {
+  const del = useServerFn(ownerDeleteVendor);
+  const { data: vendors = [] } = useQuery({
+    queryKey: ["admin-vendors"],
+    queryFn: async () => {
+      const { data } = await supabase.from("vendors").select("*").order("created_at", { ascending: false });
+      return data ?? [];
+    },
+  });
+  const remove = async (id: string, name: string) => {
+    if (!confirm(`Delete store "${name}" and all its listings?`)) return;
+    try { await del({ data: { vendor_id: id } }); toast.success("Store deleted"); qc.invalidateQueries({ queryKey: ["admin-vendors"] }); }
+    catch (e: any) { toast.error(e.message); }
+  };
+  if (vendors.length === 0) return <Empty label="stores" />;
+  return (
+    <div className="space-y-2">
+      {vendors.map((v: any) => (
+        <div key={v.id} className="rounded-xl bg-card border border-border p-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="font-semibold">{v.business_name} <span className="text-xs text-muted-foreground font-normal">· {v.owner_name}</span></div>
+            <div className="text-xs text-muted-foreground">{v.email} · {v.whatsapp_number} · {v.city} · {v.category}</div>
+          </div>
+          <div className="flex gap-2">
+            <Button asChild size="sm" variant="outline"><Link to="/vendor/$id" params={{ id: v.id }}><Store className="h-3.5 w-3.5 mr-1" />View</Link></Button>
+            <Button size="sm" variant="outline" onClick={() => remove(v.id, v.business_name)}><Trash2 className="h-3.5 w-3.5 mr-1 text-destructive" />Delete</Button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function UsersTab() {
+  const list = useServerFn(ownerListUsers);
+  const { data, isLoading } = useQuery({
+    queryKey: ["owner-users"],
+    queryFn: async () => list({ data: undefined as any }),
+  });
+  if (isLoading) return <div className="py-8 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></div>;
+  const users = data?.users ?? [];
+  if (users.length === 0) return <Empty label="users" />;
+  return (
+    <div className="rounded-xl border border-border overflow-hidden">
+      <table className="w-full text-sm">
+        <thead className="bg-muted/40 text-left text-xs uppercase tracking-wider text-muted-foreground">
+          <tr><th className="px-3 py-2">Email</th><th className="px-3 py-2">Registered</th><th className="px-3 py-2">Last sign-in</th></tr>
+        </thead>
+        <tbody>
+          {users.map((u) => (
+            <tr key={u.id} className="border-t border-border">
+              <td className="px-3 py-2 truncate max-w-xs">{u.email}</td>
+              <td className="px-3 py-2 text-muted-foreground">{new Date(u.created_at).toLocaleDateString()}</td>
+              <td className="px-3 py-2 text-muted-foreground">{u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleDateString() : "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="px-3 py-2 text-xs text-muted-foreground bg-muted/20 border-t flex items-center gap-1.5"><Users className="h-3.5 w-3.5" />{users.length} users</div>
+    </div>
   );
 }
 
 function AdminsTab() {
-  const promote = useServerFn(promoteToAdmin);
+  const promote = useServerFn(promoteToRole);
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const add = async () => {
     setLoading(true);
-    try { await promote({ data: { email } }); toast.success("Admin added"); setEmail(""); }
-    catch (e: any) { toast.error(e.message); }
-    finally { setLoading(false); }
+    try { await promote({ data: { email, role: "admin" } }); toast.success("Admin added"); setEmail(""); }
+    catch (e: any) { toast.error(e.message); } finally { setLoading(false); }
   };
   return (
-    <div className="max-w-md rounded-xl bg-card border border-border p-6">
-      <h3 className="font-display text-lg font-bold mb-2 flex items-center gap-2"><UserPlus className="h-5 w-5" />Add an admin</h3>
-      <p className="text-sm text-muted-foreground mb-4">The person must have an account already. Enter their email.</p>
+    <div className="max-w-md space-y-3">
+      <p className="text-sm text-muted-foreground">Promote an existing user to admin so they can remove inappropriate listings. They must register first.</p>
       <div className="flex gap-2">
-        <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@example.com" />
-        <Button onClick={add} disabled={loading || !email} className="bg-[var(--deal)] hover:bg-[var(--deal)]/90 text-[color:var(--deal-foreground)]">
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add"}
+        <Input type="email" placeholder="user@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <Button onClick={add} disabled={!email || loading} className="bg-[var(--deal)] hover:bg-[var(--deal)]/90 text-[color:var(--deal-foreground)]">
+          {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Add
         </Button>
       </div>
     </div>
   );
 }
 
-function FilterRow({ value, onChange }: { value: string; onChange: (v: any) => void }) {
-  return (
-    <div className="flex gap-2 mb-4 text-sm">
-      {(["pending", "approved", "rejected", "all"] as const).map((f) => (
-        <button key={f} onClick={() => onChange(f)} className={`px-3 py-1 rounded-full capitalize ${value === f ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:text-foreground"}`}>{f}</button>
-      ))}
-    </div>
-  );
-}
-function StatusBadge({ status }: { status: string }) {
-  const cls = status === "approved" ? "bg-success/10 text-success" : status === "rejected" ? "bg-destructive/10 text-destructive" : "bg-warning/15 text-warning-foreground border border-warning/30";
-  return <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${cls}`}>{status}</span>;
-}
 function Empty({ label }: { label: string }) {
-  return <div className="rounded-xl border-2 border-dashed border-border p-10 text-center text-muted-foreground">No {label}.</div>;
+  return <div className="rounded-2xl border-2 border-dashed border-border p-12 text-center text-muted-foreground">No {label} yet.</div>;
 }
