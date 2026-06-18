@@ -15,7 +15,7 @@ export const Route = createFileRoute("/safety")({
 const TIPS = [
   { Icon: MapPin, title: "Meet in public, on campus", body: "Pick a busy spot — campus food court, library entrance, residence reception. Avoid private rooms or off-campus addresses." },
   { Icon: Users, title: "Bring a friend", body: "Especially for high-value items like laptops or phones. There's safety in numbers." },
-  { Icon: EyeOff, title: "Inspect before paying", body: "Test the item in person. Turn on electronics. Check book editions. Try on clothing." },
+  { Icon: EyeOff, title: "Inspect before handing over money", body: "Test the item in person. Turn on electronics. Check book editions. Try on clothing." },
   { Icon: MessageCircle, title: "Keep chat on WhatsApp", body: "Don't move conversations to email or shady links. Screenshot suspicious messages." },
   { Icon: ShieldAlert, title: "Report sketchy stuff", body: "Anything that feels off — fake products, harassment, scams — email niberdealz@gmail.com and our admins will remove the listing." },
 ];
