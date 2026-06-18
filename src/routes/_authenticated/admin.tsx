@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Trash2, ShieldCheck, Loader2, Crown, Users, Store } from "lucide-react";
+import { Trash2, ShieldCheck, Loader2, Crown, Users, Store, BarChart3, Eye, MessageCircle, Package } from "lucide-react";
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar, Legend } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,7 @@ export const Route = createFileRoute("/_authenticated/admin")({ component: Admin
 function Admin() {
   const { user, roles, isLoading } = useAuth();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<"listings" | "stores" | "users" | "admins">("listings");
+  const [tab, setTab] = useState<"overview" | "listings" | "stores" | "users" | "admins">("overview");
 
   const isAdmin = roles.includes("admin");
   const isOwner = roles.includes("owner");
@@ -37,8 +38,8 @@ function Admin() {
   }
 
   const tabs = isOwner
-    ? (["listings", "stores", "users", "admins"] as const)
-    : (["listings"] as const);
+    ? (["overview", "listings", "stores", "users", "admins"] as const)
+    : (["overview", "listings"] as const);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -46,13 +47,13 @@ function Admin() {
       <div className="container mx-auto px-4 py-8 flex-1 max-w-6xl">
         <div className="flex flex-wrap items-start justify-between gap-3 mb-1">
           <h1 className="font-display text-3xl font-bold flex items-center gap-2">
-            {isOwner ? <Crown className="h-7 w-7 text-amber-500" /> : <ShieldCheck className="h-7 w-7 text-[color:var(--deal)]" />}
-            {isOwner ? "CEO / Owner control room" : "Admin"}
+            {isOwner ? <Crown className="h-7 w-7" /> : <ShieldCheck className="h-7 w-7" />}
+            {isOwner ? "CEO control room" : "Admin"}
           </h1>
           {isOwner && (
             <div className="flex gap-2">
               <Button asChild size="sm" variant="outline"><Link to="/dashboard"><Store className="h-4 w-4 mr-1.5" />My store</Link></Button>
-              <Button asChild size="sm" className="bg-[var(--deal)] hover:bg-[var(--deal)]/90 text-[color:var(--deal-foreground)]"><Link to="/register-shop">Sell a product</Link></Button>
+              <Button asChild size="sm" className="bg-foreground text-background hover:bg-foreground/90"><Link to="/register-shop">Sell a product</Link></Button>
             </div>
           )}
         </div>
@@ -62,16 +63,123 @@ function Admin() {
 
         <div className="flex gap-2 mb-6 border-b border-border overflow-x-auto">
           {tabs.map((t) => (
-            <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm font-semibold border-b-2 -mb-px capitalize transition ${tab === t ? "border-[var(--deal)] text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}>{t}</button>
+            <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-sm font-semibold border-b-2 -mb-px capitalize transition whitespace-nowrap ${tab === t ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}>{t}</button>
           ))}
         </div>
 
+        {tab === "overview" && <OverviewTab />}
         {tab === "listings" && <ListingsTab qc={qc} />}
         {tab === "stores" && isOwner && <StoresTab qc={qc} />}
         {tab === "users" && isOwner && <UsersTab />}
         {tab === "admins" && isOwner && <AdminsTab />}
       </div>
       <SiteFooter />
+    </div>
+  );
+}
+
+function OverviewTab() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["admin-overview"],
+    queryFn: async () => {
+      const since = new Date(Date.now() - 29 * 24 * 60 * 60 * 1000).toISOString();
+      const [events, products, vendors] = await Promise.all([
+        supabase.from("product_events").select("event_type, created_at").gte("created_at", since).limit(10000),
+        supabase.from("products").select("id, is_sold", { count: "exact" }),
+        supabase.from("vendors").select("id", { count: "exact", head: true }),
+      ]);
+      return {
+        events: events.data ?? [],
+        productCount: products.count ?? 0,
+        soldCount: (products.data ?? []).filter((p: any) => p.is_sold).length,
+        vendorCount: vendors.count ?? 0,
+      };
+    },
+  });
+
+  const series = useMemo(() => {
+    const days: { date: string; label: string; views: number; whatsapp: number }[] = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i);
+      days.push({ date: d.toISOString().slice(0, 10), label: d.toLocaleDateString(undefined, { month: "short", day: "numeric" }), views: 0, whatsapp: 0 });
+    }
+    const byDate = new Map(days.map(d => [d.date, d]));
+    (data?.events ?? []).forEach((e: any) => {
+      const k = e.created_at.slice(0, 10);
+      const row = byDate.get(k);
+      if (!row) return;
+      if (e.event_type === "view") row.views++;
+      else if (e.event_type === "whatsapp_click") row.whatsapp++;
+    });
+    return days;
+  }, [data]);
+
+  const totalViews = series.reduce((s, d) => s + d.views, 0);
+  const totalWa = series.reduce((s, d) => s + d.whatsapp, 0);
+  const ctr = totalViews ? Math.round((totalWa / totalViews) * 100) : 0;
+
+  if (isLoading) return <div className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></div>;
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <StatCard Icon={Eye} label="Listing views (30d)" value={totalViews.toLocaleString()} />
+        <StatCard Icon={MessageCircle} label="WhatsApp taps (30d)" value={totalWa.toLocaleString()} sub={`${ctr}% click-through`} />
+        <StatCard Icon={Package} label="Active listings" value={(data?.productCount ?? 0) - (data?.soldCount ?? 0)} sub={`${data?.soldCount ?? 0} sold`} />
+        <StatCard Icon={Store} label="Stores" value={data?.vendorCount ?? 0} />
+      </div>
+
+      <div className="rounded-xl border border-border bg-card p-4">
+        <h3 className="font-semibold mb-1 flex items-center gap-2"><BarChart3 className="h-4 w-4" />Traffic — last 30 days</h3>
+        <p className="text-xs text-muted-foreground mb-4">Listing views and WhatsApp chat hand-offs.</p>
+        <div className="h-72 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={series} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+              <defs>
+                <linearGradient id="vG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="hsl(220 70% 50%)" stopOpacity={0.35} /><stop offset="100%" stopColor="hsl(220 70% 50%)" stopOpacity={0} /></linearGradient>
+                <linearGradient id="wG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#25D366" stopOpacity={0.35} /><stop offset="100%" stopColor="#25D366" stopOpacity={0} /></linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 90%)" />
+              <XAxis dataKey="label" fontSize={11} tickMargin={6} />
+              <YAxis fontSize={11} allowDecimals={false} />
+              <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
+              <Area type="monotone" name="Views" dataKey="views" stroke="hsl(220 70% 50%)" fill="url(#vG)" strokeWidth={2} />
+              <Area type="monotone" name="WhatsApp taps" dataKey="whatsapp" stroke="#25D366" fill="url(#wG)" strokeWidth={2} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border bg-card p-4">
+        <h3 className="font-semibold mb-1">Engagement by day</h3>
+        <p className="text-xs text-muted-foreground mb-4">Side-by-side comparison.</p>
+        <div className="h-64 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={series.slice(-14)} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 90%)" />
+              <XAxis dataKey="label" fontSize={11} />
+              <YAxis fontSize={11} allowDecimals={false} />
+              <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
+              <Bar name="Views" dataKey="views" fill="hsl(220 70% 50%)" radius={[4, 4, 0, 0]} />
+              <Bar name="WhatsApp" dataKey="whatsapp" fill="#25D366" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ Icon, label, value, sub }: { Icon: any; label: string; value: string | number; sub?: string }) {
+  return (
+    <div className="rounded-xl border border-border bg-card p-4">
+      <div className="flex items-center justify-between text-muted-foreground text-xs font-medium uppercase tracking-wider">
+        <span>{label}</span><Icon className="h-4 w-4" />
+      </div>
+      <div className="mt-2 font-display text-2xl font-bold">{value}</div>
+      {sub && <div className="text-xs text-muted-foreground mt-0.5">{sub}</div>}
     </div>
   );
 }
