@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SiteHeader, SiteFooter } from "@/components/site-header";
-import { ShieldAlert, MapPin, MessageCircle, EyeOff, Users, AlertTriangle } from "lucide-react";
+import { ShieldAlert, MapPin, MessageCircle, EyeOff, Users } from "lucide-react";
 
 export const Route = createFileRoute("/safety")({
   head: () => ({
