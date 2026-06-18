@@ -44,12 +44,20 @@ function Admin() {
     <div className="min-h-screen flex flex-col">
       <SiteHeader />
       <div className="container mx-auto px-4 py-8 flex-1 max-w-6xl">
-        <h1 className="font-display text-3xl font-bold mb-1 flex items-center gap-2">
-          {isOwner ? <Crown className="h-7 w-7 text-amber-500" /> : <ShieldCheck className="h-7 w-7 text-[color:var(--deal)]" />}
-          {isOwner ? "Owner panel" : "Admin"}
-        </h1>
+        <div className="flex flex-wrap items-start justify-between gap-3 mb-1">
+          <h1 className="font-display text-3xl font-bold flex items-center gap-2">
+            {isOwner ? <Crown className="h-7 w-7 text-amber-500" /> : <ShieldCheck className="h-7 w-7 text-[color:var(--deal)]" />}
+            {isOwner ? "CEO / Owner control room" : "Admin"}
+          </h1>
+          {isOwner && (
+            <div className="flex gap-2">
+              <Button asChild size="sm" variant="outline"><Link to="/dashboard"><Store className="h-4 w-4 mr-1.5" />My store</Link></Button>
+              <Button asChild size="sm" className="bg-[var(--deal)] hover:bg-[var(--deal)]/90 text-[color:var(--deal-foreground)]"><Link to="/register-shop">Sell a product</Link></Button>
+            </div>
+          )}
+        </div>
         <p className="text-muted-foreground mb-6">
-          {isOwner ? "Manage users, stores and listings on Niberdealz." : "Remove inappropriate listings."}
+          {isOwner ? "Monitor every seller, remove scams or bad listings, delete entire stores, and sell your own products." : "Remove inappropriate listings."}
         </p>
 
         <div className="flex gap-2 mb-6 border-b border-border overflow-x-auto">
