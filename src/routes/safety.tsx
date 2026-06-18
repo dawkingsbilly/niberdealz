@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SiteHeader, SiteFooter } from "@/components/site-header";
-import { ShieldAlert, MapPin, MessageCircle, EyeOff, Users, AlertTriangle } from "lucide-react";
+import { ShieldAlert, MapPin, MessageCircle, EyeOff, Users } from "lucide-react";
 
 export const Route = createFileRoute("/safety")({
   head: () => ({
@@ -17,7 +17,6 @@ const TIPS = [
   { Icon: Users, title: "Bring a friend", body: "Especially for high-value items like laptops or phones. There's safety in numbers." },
   { Icon: EyeOff, title: "Inspect before paying", body: "Test the item in person. Turn on electronics. Check book editions. Try on clothing." },
   { Icon: MessageCircle, title: "Keep chat on WhatsApp", body: "Don't move conversations to email or shady links. Screenshot suspicious messages." },
-  { Icon: AlertTriangle, title: "Never pay upfront", body: "No deposits, no EFT before you see the item. Cash on collection, or use a trusted payment app in person." },
   { Icon: ShieldAlert, title: "Report sketchy stuff", body: "Anything that feels off — fake products, harassment, scams — email niberdealz@gmail.com and our admins will remove the listing." },
 ];
 
