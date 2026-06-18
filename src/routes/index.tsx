@@ -1,13 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { ArrowRight, Search, MessageCircle, GraduationCap, Tag } from "lucide-react";
+import { ArrowRight, Search, MessageCircle, GraduationCap, Tag, ShieldCheck, Truck, BadgeCheck, Users, Sparkles, Store, Handshake } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SiteHeader, SiteFooter } from "@/components/site-header";
 import { ProductCard, type ProductCardData } from "@/components/product-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CATEGORIES, SITE_NAME } from "@/lib/constants";
+import { CATEGORIES, SITE_NAME, CONTACT_PHONE, CONTACT_EMAIL } from "@/lib/constants";
 
 import img1 from "@/assets/IMG-20260604-WA0140.jpg.asset.json";
 import img2 from "@/assets/IMG-20260606-WA0028.jpg.asset.json";
