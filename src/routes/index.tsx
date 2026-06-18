@@ -109,6 +109,23 @@ function Home() {
         </div>
       </section>
 
+      {/* Trust strip */}
+      <section className="border-y border-border bg-background">
+        <div className="container mx-auto px-4 py-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          {[
+            { Icon: BadgeCheck, t: "Verified student sellers", s: "Every store reviewed by our team" },
+            { Icon: ShieldCheck, t: "Safe campus meet-ups", s: "Inspect before you pay" },
+            { Icon: Handshake, t: "0% commission", s: "Sellers keep 100%" },
+            { Icon: MessageCircle, t: "Direct on WhatsApp", s: "No middleman, no waiting" },
+          ].map(({ Icon, t, s }) => (
+            <div key={t} className="flex items-start gap-2.5">
+              <Icon className="h-5 w-5 text-[color:var(--deal)] mt-0.5 shrink-0" />
+              <div className="min-w-0"><div className="font-semibold leading-tight">{t}</div><div className="text-xs text-muted-foreground">{s}</div></div>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Category chips */}
       <section className="border-b border-border bg-card/60">
         <div className="container mx-auto px-4 py-4 flex gap-2 overflow-x-auto">
@@ -125,9 +142,12 @@ function Home() {
       </section>
 
       <section className="container mx-auto px-4 py-10 flex-1">
-        <div className="mb-6">
-          <h2 className="font-display text-2xl md:text-3xl font-bold flex items-center gap-2"><Tag className="h-6 w-6 text-[color:var(--deal)]" />Fresh listings</h2>
-          <p className="text-muted-foreground text-sm">Latest from students near you.</p>
+        <div className="mb-6 flex items-end justify-between gap-4">
+          <div>
+            <h2 className="font-display text-2xl md:text-3xl font-bold flex items-center gap-2"><Tag className="h-6 w-6 text-[color:var(--deal)]" />Fresh listings</h2>
+            <p className="text-muted-foreground text-sm">Latest from students near you.</p>
+          </div>
+          <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex"><Link to="/auth" search={{ mode: "register" }}>Become a seller <ArrowRight className="ml-1 h-4 w-4" /></Link></Button>
         </div>
 
         {isLoading ? (
@@ -148,6 +168,61 @@ function Home() {
             {products.map((p) => <ProductCard key={p.id} p={p} />)}
           </div>
         )}
+      </section>
+
+      {/* How it works */}
+      <section className="bg-secondary/40 border-t border-border">
+        <div className="container mx-auto px-4 py-14">
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-[color:var(--deal)] mb-2"><Sparkles className="h-3.5 w-3.5" />How it works</div>
+            <h2 className="font-display text-3xl md:text-4xl font-bold">Buy or sell in three steps</h2>
+          </div>
+          <div className="grid md:grid-cols-3 gap-5">
+            {[
+              { Icon: Search, t: "1. Browse", s: "Search sneakers, textbooks, electronics and more from verified students." },
+              { Icon: MessageCircle, t: "2. Tap WhatsApp", s: "Message the seller directly. Agree on a campus meet-up." },
+              { Icon: Handshake, t: "3. Inspect & pay", s: "Meet in public, check the item, pay only when you're happy." },
+            ].map(({ Icon, t, s }) => (
+              <div key={t} className="rounded-2xl bg-card border border-border p-6 shadow-[var(--shadow-card)]">
+                <div className="h-11 w-11 rounded-xl bg-[var(--deal)]/10 text-[color:var(--deal)] flex items-center justify-center mb-3"><Icon className="h-5 w-5" /></div>
+                <h3 className="font-display text-lg font-bold">{t}</h3>
+                <p className="text-sm text-muted-foreground mt-1">{s}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Sell CTA */}
+      <section className="container mx-auto px-4 py-14">
+        <div className="rounded-3xl bg-gradient-to-br from-foreground to-foreground/80 text-background p-8 md:p-12 grid md:grid-cols-[1fr_auto] items-center gap-6 shadow-[var(--shadow-card)]">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-[color:var(--accent)] mb-2"><Store className="h-3.5 w-3.5" />For sellers</div>
+            <h2 className="font-display text-2xl md:text-4xl font-bold">Open your free store today.</h2>
+            <p className="text-background/70 mt-2 max-w-xl">No listing fees, no commission, no waiting. List your items in minutes and meet buyers on campus.</p>
+            <div className="mt-3 text-xs text-background/60">Need help? Call {CONTACT_PHONE} · {CONTACT_EMAIL}</div>
+          </div>
+          <Button asChild size="lg" className="bg-[var(--deal)] hover:bg-[var(--deal)]/90 text-[color:var(--deal-foreground)] shadow-[var(--shadow-deal)]">
+            <Link to="/auth" search={{ mode: "register" }}>Start selling free <ArrowRight className="ml-1 h-4 w-4" /></Link>
+          </Button>
+        </div>
+      </section>
+
+      {/* Stats */}
+      <section className="border-t border-border bg-background">
+        <div className="container mx-auto px-4 py-10 grid grid-cols-3 gap-4 text-center">
+          {[
+            { Icon: Users, n: "Students first", s: "Built for campus" },
+            { Icon: BadgeCheck, n: "0% fees", s: "Free to list and browse" },
+            { Icon: Truck, n: "Hand-to-hand", s: "Meet, inspect, pay" },
+          ].map(({ Icon, n, s }) => (
+            <div key={n} className="flex flex-col items-center">
+              <Icon className="h-6 w-6 text-[color:var(--deal)] mb-1.5" />
+              <div className="font-display text-lg font-bold">{n}</div>
+              <div className="text-xs text-muted-foreground">{s}</div>
+            </div>
+          ))}
+        </div>
       </section>
 
       <SiteFooter />
