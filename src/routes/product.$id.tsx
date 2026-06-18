@@ -1,6 +1,7 @@
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { ArrowLeft, MapPin, MessageCircle, Store, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -74,6 +75,21 @@ function ProductDetail() {
     buildWhatsAppMessage(product.title, product.price_zar)
   )}`;
 
+  // Track a view once per product per session
+  const tracked = useRef<string | null>(null);
+  useEffect(() => {
+    if (!product?.id || tracked.current === product.id) return;
+    tracked.current = product.id;
+    const key = `nd_view_${product.id}`;
+    if (typeof sessionStorage !== "undefined" && sessionStorage.getItem(key)) return;
+    sessionStorage?.setItem(key, "1");
+    supabase.from("product_events").insert({ product_id: product.id, vendor_id: product.vendor_id, event_type: "view" }).then(() => {});
+  }, [product?.id, product?.vendor_id]);
+
+  const onWhatsAppClick = () => {
+    supabase.from("product_events").insert({ product_id: product.id, vendor_id: product.vendor_id, event_type: "whatsapp_click" }).then(() => {});
+  };
+
   const removeListing = async () => {
     if (!confirm("Remove this listing?")) return;
     try { await delFn({ data: { product_id: product.id } }); toast.success("Removed"); navigate({ to: "/" }); }
@@ -113,7 +129,7 @@ function ProductDetail() {
 
             <div className="mt-6">
               <Button asChild size="lg" disabled={product.is_sold} className="w-full h-14 bg-[#25D366] hover:bg-[#25D366]/90 text-white shadow-lg gap-2 text-base font-semibold">
-                <a href={product.is_sold ? "#" : waLink} target="_blank" rel="noopener noreferrer">
+                <a href={product.is_sold ? "#" : waLink} target="_blank" rel="noopener noreferrer" onClick={product.is_sold ? undefined : onWhatsAppClick}>
                   <MessageCircle className="h-5 w-5" /> {product.is_sold ? "Sold" : "Buy on WhatsApp"}
                 </a>
               </Button>
