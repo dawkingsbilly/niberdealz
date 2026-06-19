@@ -23,7 +23,7 @@ const TIPS = [
   { Icon: BadgeCheck, title: "Trust verified stores", body: "Look at how long the store has been active, how many other listings it has, and whether the WhatsApp number matches the store name." },
   
   { Icon: Lock, title: "Protect your personal info", body: "Don't share your ID number, banking PIN, OTPs, or NSFAS details. No legitimate seller or buyer needs them." },
-  { Icon: Flag, title: "Report sketchy listings", body: `Anything that feels off — fake products, harassment, hate speech, weapons, drugs — email ${CONTACT_EMAIL} or WhatsApp ${CONTACT_PHONE}. Our team removes flagged listings fast.` },
+  { Icon: ShieldAlert, title: "Report sketchy listings", body: `Anything that feels off — fake products, harassment, hate speech, weapons, drugs — email ${CONTACT_EMAIL} or WhatsApp ${CONTACT_PHONE}. Our team removes flagged listings fast.` },
 ];
 
 
