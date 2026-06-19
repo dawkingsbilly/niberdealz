@@ -21,7 +21,7 @@ const TIPS = [
   { Icon: MessageCircle, title: "Keep the chat on WhatsApp", body: "All conversations should stay on the WhatsApp number listed on the store. Don't switch to email, Telegram, or shady links sent by strangers." },
   { Icon: Camera, title: "Screenshot everything", body: "Save the listing, your WhatsApp chat, and any agreement on price. This is your evidence if something goes wrong." },
   { Icon: BadgeCheck, title: "Trust verified stores", body: "Look at how long the store has been active, how many other listings it has, and whether the WhatsApp number matches the store name." },
-  { Icon: Ban, title: "Never send money upfront to strangers", body: "Pay in person, after you have inspected the item and are happy with it. Refuse requests for EFT, eWallet, or crypto deposits before meeting." },
+  
   { Icon: Lock, title: "Protect your personal info", body: "Don't share your ID number, banking PIN, OTPs, or NSFAS details. No legitimate seller or buyer needs them." },
   { Icon: Flag, title: "Report sketchy listings", body: `Anything that feels off — fake products, harassment, hate speech, weapons, drugs — email ${CONTACT_EMAIL} or WhatsApp ${CONTACT_PHONE}. Our team removes flagged listings fast.` },
 ];
