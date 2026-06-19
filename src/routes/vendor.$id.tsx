@@ -21,7 +21,7 @@ function VendorPage() {
     queryKey: ["vendor", id],
     queryFn: async () => {
       const [{ data: vendor }, { data: products }] = await Promise.all([
-        supabase.from("vendors").select("*").eq("id", id).eq("status", "approved").maybeSingle(),
+        supabase.from("vendors").select("id, business_name, owner_name, whatsapp_number, city, province, category, business_description, logo_url, status, created_at").eq("id", id).eq("status", "approved").maybeSingle(),
         supabase.from("products").select("id, title, price_zar, category, image_url").eq("vendor_id", id).eq("status", "approved").order("created_at", { ascending: false }),
       ]);
       if (!vendor) throw notFound();

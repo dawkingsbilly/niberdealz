@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SiteHeader, SiteFooter } from "@/components/site-header";
 import { adminDeleteProduct, ownerDeleteVendor, ownerListUsers, promoteToRole } from "@/lib/marketplace.functions";
-import { CEO_EMAIL } from "@/lib/constants";
 
 export const Route = createFileRoute("/_authenticated/admin")({ component: Admin });
 
@@ -197,18 +196,15 @@ function ClaimAccess({ email }: { email: string }) {
       toast.error(e.message ?? "Access denied.");
     } finally { setLoading(null); }
   };
-  const isCeo = email.toLowerCase() === CEO_EMAIL.toLowerCase();
   return (
     <>
       <Crown className="h-12 w-12 mx-auto text-amber-500 mb-3" />
       <h1 className="font-display text-2xl font-bold">Owner / Admin access</h1>
       <p className="text-muted-foreground mt-2">Signed in as <strong className="text-foreground">{email}</strong>.</p>
-      {isCeo && (
-        <Button onClick={() => claim("owner")} disabled={loading !== null} className="mt-6 bg-amber-500 hover:bg-amber-500/90 text-white">
-          {loading === "owner" && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Claim CEO / Owner
-        </Button>
-      )}
-      <p className="text-xs text-muted-foreground mt-4">Only the owner can promote new admins.</p>
+      <Button onClick={() => claim("owner")} disabled={loading !== null} className="mt-6 bg-amber-500 hover:bg-amber-500/90 text-white">
+        {loading === "owner" && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Claim CEO / Owner
+      </Button>
+      <p className="text-xs text-muted-foreground mt-4">Only the verified CEO email can claim the owner role. Additional admins can only be added by the owner.</p>
     </>
   );
 }

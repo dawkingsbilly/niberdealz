@@ -61,9 +61,24 @@ function Dashboard() {
     try {
       let image_url: string | null = null;
       if (imageFile) {
-        const ext = imageFile.name.split(".").pop();
+        // Client-side validation. The bucket also enforces an allow-list of safe
+        // image MIME types and a 5 MB size limit server-side, so a manipulated
+        // request still cannot upload SVG/HTML or oversized files.
+        const ALLOWED = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"];
+        const EXT_BY_MIME: Record<string, string> = {
+          "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif", "image/avif": "avif",
+        };
+        if (!ALLOWED.includes(imageFile.type)) {
+          throw new Error("Please upload a JPG, PNG, WEBP, GIF or AVIF image.");
+        }
+        if (imageFile.size > 5 * 1024 * 1024) {
+          throw new Error("Image must be smaller than 5 MB.");
+        }
+        const ext = EXT_BY_MIME[imageFile.type];
         const path = `${user!.id}/${crypto.randomUUID()}.${ext}`;
-        const { error: uErr } = await supabase.storage.from("product-images").upload(path, imageFile, { upsert: false });
+        const { error: uErr } = await supabase.storage
+          .from("product-images")
+          .upload(path, imageFile, { upsert: false, contentType: imageFile.type });
         if (uErr) throw uErr;
         const { data: signed, error: sErr } = await supabase.storage.from("product-images").createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
         if (sErr) throw sErr;
