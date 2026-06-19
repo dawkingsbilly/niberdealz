@@ -26,15 +26,6 @@ const TIPS = [
   { Icon: Flag, title: "Report sketchy listings", body: `Anything that feels off — fake products, harassment, hate speech, weapons, drugs — email ${CONTACT_EMAIL} or WhatsApp ${CONTACT_PHONE}. Our team removes flagged listings fast.` },
 ];
 
-const RED_FLAGS = [
-  "Seller refuses to meet in person or only wants to ship.",
-  "Price is far below market value with pressure to pay immediately.",
-  "Asks for a deposit, 'holding fee', or delivery fee before you meet.",
-  "WhatsApp number doesn't match the country code or store name.",
-  "Profile or listing was created minutes ago with no other items.",
-  "Photos look stolen from Google or a different language site.",
-  "Pushes you off WhatsApp to a 'secure' link, courier site, or new app.",
-];
 
 function Safety() {
   return (
