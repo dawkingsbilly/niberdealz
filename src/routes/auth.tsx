@@ -43,10 +43,15 @@ function AuthPage() {
         navigate({ to: "/admin", replace: true });
         return;
       }
+      // CEO sign-in flow never falls back to vendor registration.
+      if (isCeo) {
+        navigate({ to: "/admin", replace: true });
+        return;
+      }
       const { data } = await supabase.from("vendors").select("id").eq("id", user.id).maybeSingle();
       navigate({ to: data ? "/dashboard" : "/register-shop", replace: true });
     })();
-  }, [user, roles, authLoading, navigate]);
+  }, [user, roles, authLoading, navigate, isCeo]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
