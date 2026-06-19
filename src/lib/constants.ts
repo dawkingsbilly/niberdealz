@@ -3,7 +3,7 @@ export const SITE_TAGLINE = "The student marketplace. Buy and sell on WhatsApp."
 
 export const CONTACT_PHONE = "068 751 0600";
 export const CONTACT_EMAIL = "niberdealz@gmail.com";
-export const CEO_EMAIL = "sibandaniberyot99@gmail.com";
+
 
 export const CATEGORIES = [
   "Sneakers",

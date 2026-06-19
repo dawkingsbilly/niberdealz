@@ -137,6 +137,8 @@ export const promoteToRole = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => PromoteInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const bootstrapOwnerEmail = (process.env.OWNER_BOOTSTRAP_EMAIL ?? "sibandaniberyot99@gmail.com").toLowerCase();
+    const callerEmail = ((context.claims.email as string | undefined) ?? "").toLowerCase();
 
     if (data.role === "owner") {
       const { count: ownerCount } = await supabaseAdmin
@@ -144,6 +146,14 @@ export const promoteToRole = createServerFn({ method: "POST" })
       if ((ownerCount ?? 0) > 0) {
         const { data: isOwner } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "owner" });
         if (!isOwner) throw new Error("Only the owner can add another owner.");
+      } else {
+        // Bootstrap: only the configured CEO email may claim the first owner role.
+        if (callerEmail !== bootstrapOwnerEmail) {
+          throw new Error("Only the verified CEO email can claim the owner role.");
+        }
+        if (data.email.toLowerCase() !== bootstrapOwnerEmail) {
+          throw new Error("The first owner must be the verified CEO account.");
+        }
       }
     } else {
       // admin: only owner or existing admin can add admins (after bootstrap)
