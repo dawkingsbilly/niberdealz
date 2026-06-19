@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SiteHeader, SiteFooter } from "@/components/site-header";
-import { ShieldAlert, MapPin, MessageCircle, EyeOff, Users, Camera, Flag, Phone, Sun, BadgeCheck, Ban, Lock } from "lucide-react";
+import { ShieldAlert, MapPin, MessageCircle, EyeOff, Users, Camera, Phone, Sun, BadgeCheck, Ban, Lock } from "lucide-react";
 import { CONTACT_EMAIL, CONTACT_PHONE } from "@/lib/constants";
 
 export const Route = createFileRoute("/safety")({
@@ -51,16 +51,6 @@ function Safety() {
           ))}
         </div>
 
-        <h2 className="font-display text-2xl font-bold mt-12">Scam red flags</h2>
-        <p className="text-sm text-muted-foreground mt-2">If you see any of these, stop and report the listing.</p>
-        <ul className="mt-4 space-y-2 text-sm">
-          {RED_FLAGS.map((flag) => (
-            <li key={flag} className="flex gap-3 rounded-lg border border-border bg-card p-3">
-              <Flag className="h-4 w-4 mt-0.5 text-[color:var(--deal)] shrink-0" />
-              <span>{flag}</span>
-            </li>
-          ))}
-        </ul>
 
         <h2 className="font-display text-2xl font-bold mt-12">For sellers</h2>
         <ul className="mt-3 list-disc pl-5 text-sm space-y-2 text-muted-foreground">
