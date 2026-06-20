@@ -11,7 +11,6 @@ const VendorInput = z.object({
   category: z.string().trim().min(2).max(60),
 });
 
-// Free vendor registration — auto-approved instantly.
 export const submitVendorRegistration = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => VendorInput.parse(d))
@@ -40,6 +39,7 @@ const ProductInput = z.object({
   price_zar: z.number().min(0).max(10_000_000),
   category: z.string().trim().min(2).max(60),
   image_url: z.string().trim().max(1000).optional().nullable(),
+  images: z.array(z.string().trim().max(1000)).max(6).optional(),
   size: z.string().trim().max(40).optional().nullable(),
   color: z.string().trim().max(40).optional().nullable(),
 });
@@ -53,23 +53,55 @@ export const submitProduct = createServerFn({ method: "POST" })
       .from("vendors").select("status").eq("id", userId).maybeSingle();
     if (!vendor) throw new Error("Create your store first.");
 
+    const images = data.images ?? (data.image_url ? [data.image_url] : []);
+    const cover = data.image_url ?? images[0] ?? null;
+
     const { data: row, error } = await supabase.from("products").insert({
       vendor_id: userId,
       title: data.title,
       description: data.description,
       price_zar: data.price_zar,
       category: data.category,
-      image_url: data.image_url ?? null,
+      image_url: cover,
+      images,
       size: data.size || null,
       color: data.color || null,
       status: "approved",
       is_sold: false,
-    }).select("id").single();
+    } as any).select("id").single();
     if (error) throw new Error(error.message);
     return { ok: true, id: row.id };
   });
 
-// Mark product as available / sold (vendor self-service)
+const ProductUpdateInput = z.object({
+  product_id: z.string().uuid(),
+  title: z.string().trim().min(2).max(120),
+  description: z.string().trim().min(5).max(2000),
+  price_zar: z.number().min(0).max(10_000_000),
+  category: z.string().trim().min(2).max(60),
+  images: z.array(z.string().trim().max(1000)).max(6),
+  size: z.string().trim().max(40).optional().nullable(),
+  color: z.string().trim().max(40).optional().nullable(),
+});
+
+export const updateProduct = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => ProductUpdateInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const cover = data.images[0] ?? null;
+    const { error } = await context.supabase.from("products")
+      .update({
+        title: data.title, description: data.description,
+        price_zar: data.price_zar, category: data.category,
+        images: data.images, image_url: cover,
+        size: data.size || null, color: data.color || null,
+      } as any)
+      .eq("id", data.product_id)
+      .eq("vendor_id", context.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const setProductSold = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ product_id: z.string().uuid(), is_sold: z.boolean() }).parse(d))
@@ -82,7 +114,6 @@ export const setProductSold = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-// Admin or owner can delete any product listing.
 export const adminDeleteProduct = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ product_id: z.string().uuid() }).parse(d))
@@ -97,21 +128,18 @@ export const adminDeleteProduct = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-// Owner can delete an entire store.
 export const ownerDeleteVendor = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ vendor_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: isOwner } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "owner" });
     if (!isOwner) throw new Error("Only the owner can delete stores.");
-    // Delete products first then vendor
     await context.supabase.from("products").delete().eq("vendor_id", data.vendor_id);
     const { error } = await context.supabase.from("vendors").delete().eq("id", data.vendor_id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
 
-// Owner: list all registered users (auth) with their vendor info if any.
 export const ownerListUsers = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -130,7 +158,6 @@ export const ownerListUsers = createServerFn({ method: "POST" })
     };
   });
 
-// Promote a user to admin or owner. Bootstrap: if no owner exists, anyone can claim owner.
 const PromoteInput = z.object({ email: z.string().email(), role: z.enum(["admin", "owner"]).default("admin") });
 export const promoteToRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -147,7 +174,6 @@ export const promoteToRole = createServerFn({ method: "POST" })
         const { data: isOwner } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "owner" });
         if (!isOwner) throw new Error("Only the owner can add another owner.");
       } else {
-        // Bootstrap: only the configured CEO email may claim the first owner role.
         if (callerEmail !== bootstrapOwnerEmail) {
           throw new Error("Only the verified CEO email can claim the owner role.");
         }
@@ -156,7 +182,6 @@ export const promoteToRole = createServerFn({ method: "POST" })
         }
       }
     } else {
-      // admin: only owner or existing admin can add admins (after bootstrap)
       const { count: adminCount } = await supabaseAdmin
         .from("user_roles").select("*", { count: "exact", head: true }).eq("role", "admin");
       if ((adminCount ?? 0) > 0) {
@@ -176,4 +201,137 @@ export const promoteToRole = createServerFn({ method: "POST" })
     const { error } = await supabaseAdmin.from("user_roles").insert({ user_id: target.id, role: data.role });
     if (error && !error.message.includes("duplicate")) throw new Error(error.message);
     return { ok: true, userId: target.id };
+  });
+
+// ====== Reviews ======
+const ReviewInput = z.object({
+  product_id: z.string().uuid(),
+  rating: z.number().int().min(1).max(5),
+  comment: z.string().trim().max(1000).default(""),
+});
+export const submitReview = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => ReviewInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: prod, error: pErr } = await context.supabase
+      .from("products").select("vendor_id").eq("id", data.product_id).maybeSingle();
+    if (pErr) throw new Error(pErr.message);
+    if (!prod) throw new Error("Product not found");
+    const { error } = await (context.supabase.from("product_reviews") as any).upsert({
+      product_id: data.product_id,
+      vendor_id: prod.vendor_id,
+      user_id: context.userId,
+      rating: data.rating,
+      comment: data.comment,
+    }, { onConflict: "product_id,user_id" });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// ====== Reports ======
+const ReportInput = z.object({
+  target_type: z.enum(["product", "store"]),
+  target_id: z.string().uuid(),
+  reason: z.string().trim().min(2).max(80),
+  note: z.string().trim().max(1000).default(""),
+});
+export const submitReport = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => ReportInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await (context.supabase.from("reports") as any).insert({
+      reporter_id: context.userId,
+      target_type: data.target_type,
+      target_id: data.target_id,
+      reason: data.reason,
+      note: data.note,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+const ReportStatusInput = z.object({
+  report_id: z.string().uuid(),
+  status: z.enum(["open", "reviewed", "dismissed"]),
+});
+export const setReportStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => ReportStatusInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const [{ data: isAdmin }, { data: isOwner }] = await Promise.all([
+      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" }),
+      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "owner" }),
+    ]);
+    if (!isAdmin && !isOwner) throw new Error("Forbidden");
+    const { error } = await (context.supabase.from("reports") as any)
+      .update({ status: data.status }).eq("id", data.report_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// ====== Vendor warnings ======
+const WarningInput = z.object({
+  vendor_id: z.string().uuid(),
+  message: z.string().trim().min(5).max(2000),
+});
+export const sendVendorWarning = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => WarningInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const [{ data: isAdmin }, { data: isOwner }] = await Promise.all([
+      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" }),
+      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "owner" }),
+    ]);
+    if (!isAdmin && !isOwner) throw new Error("Forbidden");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await (supabaseAdmin.from("vendor_warnings") as any).insert({
+      vendor_id: data.vendor_id,
+      message: data.message,
+      sent_by: context.userId,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const acknowledgeWarning = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ warning_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await (context.supabase.from("vendor_warnings") as any)
+      .update({ acknowledged_at: new Date().toISOString() })
+      .eq("id", data.warning_id)
+      .eq("vendor_id", context.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// Owner: full store detail with owner info + listings + recent events
+export const ownerStoreDetail = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ vendor_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const [{ data: isAdmin }, { data: isOwner }] = await Promise.all([
+      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" }),
+      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "owner" }),
+    ]);
+    if (!isAdmin && !isOwner) throw new Error("Forbidden");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const [vendor, products, warnings, reports, authUser] = await Promise.all([
+      supabaseAdmin.from("vendors").select("*").eq("id", data.vendor_id).maybeSingle(),
+      supabaseAdmin.from("products").select("id, title, price_zar, status, is_sold, created_at").eq("vendor_id", data.vendor_id).order("created_at", { ascending: false }),
+      (supabaseAdmin.from("vendor_warnings") as any).select("*").eq("vendor_id", data.vendor_id).order("created_at", { ascending: false }),
+      (supabaseAdmin.from("reports") as any).select("*").or(`and(target_type.eq.store,target_id.eq.${data.vendor_id})`).order("created_at", { ascending: false }),
+      supabaseAdmin.auth.admin.getUserById(data.vendor_id),
+    ]);
+    return {
+      vendor: vendor.data ?? null,
+      products: products.data ?? [],
+      warnings: warnings.data ?? [],
+      reports: reports.data ?? [],
+      user: authUser.data?.user ? {
+        email: authUser.data.user.email ?? "",
+        created_at: authUser.data.user.created_at,
+        last_sign_in_at: authUser.data.user.last_sign_in_at ?? null,
+      } : null,
+    };
   });

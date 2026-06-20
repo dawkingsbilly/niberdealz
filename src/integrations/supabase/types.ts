@@ -100,6 +100,51 @@ export type Database = {
           },
         ]
       }
+      product_reviews: {
+        Row: {
+          comment: string
+          created_at: string
+          id: string
+          product_id: string
+          rating: number
+          user_id: string
+          vendor_id: string
+        }
+        Insert: {
+          comment?: string
+          created_at?: string
+          id?: string
+          product_id: string
+          rating: number
+          user_id: string
+          vendor_id: string
+        }
+        Update: {
+          comment?: string
+          created_at?: string
+          id?: string
+          product_id?: string
+          rating?: number
+          user_id?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_reviews_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_reviews_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           ai_review_notes: string | null
@@ -110,6 +155,7 @@ export type Database = {
           description: string
           id: string
           image_url: string | null
+          images: string[]
           is_sold: boolean
           price_zar: number
           rejection_reason: string | null
@@ -128,6 +174,7 @@ export type Database = {
           description: string
           id?: string
           image_url?: string | null
+          images?: string[]
           is_sold?: boolean
           price_zar: number
           rejection_reason?: string | null
@@ -146,6 +193,7 @@ export type Database = {
           description?: string
           id?: string
           image_url?: string | null
+          images?: string[]
           is_sold?: boolean
           price_zar?: number
           rejection_reason?: string | null
@@ -164,6 +212,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      reports: {
+        Row: {
+          created_at: string
+          id: string
+          note: string
+          reason: string
+          reporter_id: string
+          status: string
+          target_id: string
+          target_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          note?: string
+          reason: string
+          reporter_id: string
+          status?: string
+          target_id: string
+          target_type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          note?: string
+          reason?: string
+          reporter_id?: string
+          status?: string
+          target_id?: string
+          target_type?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
@@ -185,6 +266,41 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      vendor_warnings: {
+        Row: {
+          acknowledged_at: string | null
+          created_at: string
+          id: string
+          message: string
+          sent_by: string
+          vendor_id: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          created_at?: string
+          id?: string
+          message: string
+          sent_by: string
+          vendor_id: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          created_at?: string
+          id?: string
+          message?: string
+          sent_by?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_warnings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vendors: {
         Row: {
