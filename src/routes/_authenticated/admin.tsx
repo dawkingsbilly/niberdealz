@@ -3,21 +3,22 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Trash2, ShieldCheck, Loader2, Crown, Users, Store, BarChart3, Eye, MessageCircle, Package } from "lucide-react";
+import { Trash2, ShieldCheck, Loader2, Crown, Users, Store, BarChart3, Eye, MessageCircle, Package, Flag, AlertTriangle, X, Mail, Phone, MapPin, Calendar } from "lucide-react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar, Legend } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { SiteHeader, SiteFooter } from "@/components/site-header";
-import { adminDeleteProduct, ownerDeleteVendor, ownerListUsers, promoteToRole } from "@/lib/marketplace.functions";
+import { adminDeleteProduct, ownerDeleteVendor, ownerListUsers, promoteToRole, sendVendorWarning, setReportStatus, ownerStoreDetail } from "@/lib/marketplace.functions";
 
 export const Route = createFileRoute("/_authenticated/admin")({ component: Admin });
 
 function Admin() {
   const { user, roles, isLoading } = useAuth();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<"overview" | "listings" | "stores" | "users" | "admins">("overview");
+  const [tab, setTab] = useState<"overview" | "listings" | "stores" | "reports" | "users" | "admins">("overview");
 
   const isAdmin = roles.includes("admin");
   const isOwner = roles.includes("owner");
@@ -26,19 +27,16 @@ function Admin() {
 
   if (!isAdmin && !isOwner) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <SiteHeader />
-        <div className="flex-1 container mx-auto px-4 py-16 max-w-lg text-center">
-          <ClaimAccess email={user?.email ?? ""} />
-        </div>
+      <div className="min-h-screen flex flex-col"><SiteHeader />
+        <div className="flex-1 container mx-auto px-4 py-16 max-w-lg text-center"><ClaimAccess email={user?.email ?? ""} /></div>
         <SiteFooter />
       </div>
     );
   }
 
   const tabs = isOwner
-    ? (["overview", "listings", "stores", "users", "admins"] as const)
-    : (["overview", "listings"] as const);
+    ? (["overview", "listings", "stores", "reports", "users", "admins"] as const)
+    : (["overview", "listings", "reports"] as const);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -57,7 +55,7 @@ function Admin() {
           )}
         </div>
         <p className="text-muted-foreground mb-6">
-          {isOwner ? "Monitor every seller, remove scams or bad listings, delete entire stores, and sell your own products." : "Remove inappropriate listings."}
+          {isOwner ? "Monitor every seller, review reports, send warnings, and remove scams." : "Remove inappropriate listings and review reports."}
         </p>
 
         <div className="flex gap-2 mb-6 border-b border-border overflow-x-auto">
@@ -69,6 +67,7 @@ function Admin() {
         {tab === "overview" && <OverviewTab />}
         {tab === "listings" && <ListingsTab qc={qc} />}
         {tab === "stores" && isOwner && <StoresTab qc={qc} />}
+        {tab === "reports" && <ReportsTab qc={qc} />}
         {tab === "users" && isOwner && <UsersTab />}
         {tab === "admins" && isOwner && <AdminsTab />}
       </div>
@@ -82,16 +81,18 @@ function OverviewTab() {
     queryKey: ["admin-overview"],
     queryFn: async () => {
       const since = new Date(Date.now() - 29 * 24 * 60 * 60 * 1000).toISOString();
-      const [events, products, vendors] = await Promise.all([
+      const [events, products, vendors, openReports] = await Promise.all([
         supabase.from("product_events").select("event_type, created_at").gte("created_at", since).limit(10000),
         supabase.from("products").select("id, is_sold", { count: "exact" }),
         supabase.from("vendors").select("id", { count: "exact", head: true }),
+        (supabase.from("reports" as any) as any).select("id", { count: "exact", head: true }).eq("status", "open"),
       ]);
       return {
         events: events.data ?? [],
         productCount: products.count ?? 0,
         soldCount: (products.data ?? []).filter((p: any) => p.is_sold).length,
         vendorCount: vendors.count ?? 0,
+        openReports: openReports.count ?? 0,
       };
     },
   });
@@ -105,10 +106,8 @@ function OverviewTab() {
     const byDate = new Map(days.map(d => [d.date, d]));
     (data?.events ?? []).forEach((e: any) => {
       const k = e.created_at.slice(0, 10);
-      const row = byDate.get(k);
-      if (!row) return;
-      if (e.event_type === "view") row.views++;
-      else if (e.event_type === "whatsapp_click") row.whatsapp++;
+      const row = byDate.get(k); if (!row) return;
+      if (e.event_type === "view") row.views++; else if (e.event_type === "whatsapp_click") row.whatsapp++;
     });
     return days;
   }, [data]);
@@ -121,16 +120,16 @@ function OverviewTab() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard Icon={Eye} label="Listing views (30d)" value={totalViews.toLocaleString()} />
-        <StatCard Icon={MessageCircle} label="WhatsApp taps (30d)" value={totalWa.toLocaleString()} sub={`${ctr}% click-through`} />
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <StatCard Icon={Eye} label="Views (30d)" value={totalViews.toLocaleString()} />
+        <StatCard Icon={MessageCircle} label="WhatsApp taps" value={totalWa.toLocaleString()} sub={`${ctr}% CTR`} />
         <StatCard Icon={Package} label="Active listings" value={(data?.productCount ?? 0) - (data?.soldCount ?? 0)} sub={`${data?.soldCount ?? 0} sold`} />
         <StatCard Icon={Store} label="Stores" value={data?.vendorCount ?? 0} />
+        <StatCard Icon={Flag} label="Open reports" value={data?.openReports ?? 0} />
       </div>
 
       <div className="rounded-xl border border-border bg-card p-4">
         <h3 className="font-semibold mb-1 flex items-center gap-2"><BarChart3 className="h-4 w-4" />Traffic — last 30 days</h3>
-        <p className="text-xs text-muted-foreground mb-4">Listing views and WhatsApp chat hand-offs.</p>
         <div className="h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={series} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
@@ -151,8 +150,7 @@ function OverviewTab() {
       </div>
 
       <div className="rounded-xl border border-border bg-card p-4">
-        <h3 className="font-semibold mb-1">Engagement by day</h3>
-        <p className="text-xs text-muted-foreground mb-4">Side-by-side comparison.</p>
+        <h3 className="font-semibold mb-1">Engagement — last 14 days</h3>
         <div className="h-64 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={series.slice(-14)} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
@@ -188,13 +186,9 @@ function ClaimAccess({ email }: { email: string }) {
   const [loading, setLoading] = useState<"owner" | "admin" | null>(null);
   const claim = async (role: "owner" | "admin") => {
     setLoading(role);
-    try {
-      await promote({ data: { email, role } });
-      toast.success(`You are now ${role}! Reloading…`);
-      setTimeout(() => window.location.reload(), 600);
-    } catch (e: any) {
-      toast.error(e.message ?? "Access denied.");
-    } finally { setLoading(null); }
+    try { await promote({ data: { email, role } }); toast.success(`You are now ${role}! Reloading…`); setTimeout(() => window.location.reload(), 600); }
+    catch (e: any) { toast.error(e.message ?? "Access denied."); }
+    finally { setLoading(null); }
   };
   return (
     <>
@@ -204,7 +198,7 @@ function ClaimAccess({ email }: { email: string }) {
       <Button onClick={() => claim("owner")} disabled={loading !== null} className="mt-6 bg-amber-500 hover:bg-amber-500/90 text-white">
         {loading === "owner" && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Claim CEO / Owner
       </Button>
-      <p className="text-xs text-muted-foreground mt-4">Only the verified CEO email can claim the owner role. Additional admins can only be added by the owner.</p>
+      <p className="text-xs text-muted-foreground mt-4">Only the verified CEO email can claim the owner role.</p>
     </>
   );
 }
@@ -230,12 +224,10 @@ function ListingsTab({ qc }: { qc: ReturnType<typeof useQueryClient> }) {
         <div key={p.id} className="rounded-xl bg-card border border-border p-3 flex gap-3">
           <div className="h-20 w-20 rounded-lg bg-muted overflow-hidden shrink-0">{p.image_url && <img src={p.image_url} alt="" className="h-full w-full object-cover" />}</div>
           <div className="flex-1 min-w-0">
-            <div className="font-semibold line-clamp-1">{p.title}</div>
+            <Link to="/product/$id" params={{ id: p.id }} className="font-semibold line-clamp-1 hover:underline">{p.title}</Link>
             <div className="text-xs text-muted-foreground truncate">{p.vendors?.business_name} · R{p.price_zar} · {p.category}</div>
             <p className="text-xs mt-1 line-clamp-2 text-foreground/70">{p.description}</p>
-            <div className="mt-2 flex justify-end">
-              <Button size="sm" variant="outline" onClick={() => remove(p.id)}><Trash2 className="h-3.5 w-3.5 mr-1" /> Remove</Button>
-            </div>
+            <div className="mt-2 flex justify-end"><Button size="sm" variant="outline" onClick={() => remove(p.id)}><Trash2 className="h-3.5 w-3.5 mr-1" /> Remove</Button></div>
           </div>
         </div>
       ))}
@@ -245,6 +237,8 @@ function ListingsTab({ qc }: { qc: ReturnType<typeof useQueryClient> }) {
 
 function StoresTab({ qc }: { qc: ReturnType<typeof useQueryClient> }) {
   const del = useServerFn(ownerDeleteVendor);
+  const [warning, setWarning] = useState<{ id: string; name: string } | null>(null);
+  const [viewing, setViewing] = useState<string | null>(null);
   const { data: vendors = [] } = useQuery({
     queryKey: ["admin-vendors"],
     queryFn: async () => {
@@ -259,29 +253,202 @@ function StoresTab({ qc }: { qc: ReturnType<typeof useQueryClient> }) {
   };
   if (vendors.length === 0) return <Empty label="stores" />;
   return (
-    <div className="space-y-2">
-      {vendors.map((v: any) => (
-        <div key={v.id} className="rounded-xl bg-card border border-border p-4 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <div className="font-semibold">{v.business_name} <span className="text-xs text-muted-foreground font-normal">· {v.owner_name}</span></div>
-            <div className="text-xs text-muted-foreground">{v.email} · {v.whatsapp_number} · {v.city} · {v.category}</div>
+    <>
+      <div className="space-y-2">
+        {vendors.map((v: any) => (
+          <div key={v.id} className="rounded-xl bg-card border border-border p-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="font-semibold">{v.business_name} <span className="text-xs text-muted-foreground font-normal">· {v.owner_name}</span></div>
+              <div className="text-xs text-muted-foreground truncate">{v.email} · {v.whatsapp_number} · {v.city} · {v.category}</div>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <Button size="sm" variant="outline" onClick={() => setViewing(v.id)}>Full info</Button>
+              <Button size="sm" variant="outline" onClick={() => setWarning({ id: v.id, name: v.business_name })} className="text-amber-700 border-amber-300"><AlertTriangle className="h-3.5 w-3.5 mr-1" />Warn</Button>
+              <Button asChild size="sm" variant="outline"><Link to="/vendor/$id" params={{ id: v.id }}><Store className="h-3.5 w-3.5 mr-1" />Shop</Link></Button>
+              <Button size="sm" variant="outline" onClick={() => remove(v.id, v.business_name)}><Trash2 className="h-3.5 w-3.5 mr-1 text-destructive" />Delete</Button>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <Button asChild size="sm" variant="outline"><Link to="/vendor/$id" params={{ id: v.id }}><Store className="h-3.5 w-3.5 mr-1" />View</Link></Button>
-            <Button size="sm" variant="outline" onClick={() => remove(v.id, v.business_name)}><Trash2 className="h-3.5 w-3.5 mr-1 text-destructive" />Delete</Button>
-          </div>
+        ))}
+      </div>
+      {warning && <WarningDialog vendorId={warning.id} vendorName={warning.name} onClose={() => setWarning(null)} />}
+      {viewing && <StoreDetailDialog vendorId={viewing} onClose={() => setViewing(null)} onWarn={(id, name) => { setViewing(null); setWarning({ id, name }); }} />}
+    </>
+  );
+}
+
+function WarningDialog({ vendorId, vendorName, onClose }: { vendorId: string; vendorName: string; onClose: () => void }) {
+  const warnFn = useServerFn(sendVendorWarning);
+  const [message, setMessage] = useState(`Dear ${vendorName},\n\nThis is an official warning from Niberdealz regarding your store. We have noticed the following issue:\n\n[describe what to fix]\n\nPlease correct this within 7 days, or your store may be suspended.\n\n— Niberdealz Team`);
+  const [saving, setSaving] = useState(false);
+  const send = async () => {
+    setSaving(true);
+    try { await warnFn({ data: { vendor_id: vendorId, message } }); toast.success("Warning sent to store"); onClose(); }
+    catch (e: any) { toast.error(e.message); }
+    finally { setSaving(false); }
+  };
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-card rounded-2xl w-full max-w-lg p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-display text-lg font-bold flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-amber-500" />Warn {vendorName}</h3>
+          <Button size="sm" variant="ghost" onClick={onClose}><X className="h-4 w-4" /></Button>
         </div>
-      ))}
+        <p className="text-xs text-muted-foreground mb-2">Edit the message — the store owner will see it on their dashboard.</p>
+        <Textarea rows={10} value={message} onChange={(e) => setMessage(e.target.value)} />
+        <div className="flex gap-2 mt-4 justify-end">
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={send} disabled={saving} className="bg-amber-500 hover:bg-amber-500/90 text-white">{saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Send warning</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StoreDetailDialog({ vendorId, onClose, onWarn }: { vendorId: string; onClose: () => void; onWarn: (id: string, name: string) => void }) {
+  const detailFn = useServerFn(ownerStoreDetail);
+  const { data, isLoading } = useQuery({
+    queryKey: ["store-detail", vendorId],
+    queryFn: () => detailFn({ data: { vendor_id: vendorId } }),
+  });
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 overflow-y-auto" onClick={onClose}>
+      <div className="bg-card rounded-2xl w-full max-w-2xl my-8 p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-display text-lg font-bold">Store details</h3>
+          <Button size="sm" variant="ghost" onClick={onClose}><X className="h-4 w-4" /></Button>
+        </div>
+        {isLoading || !data ? <div className="py-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></div> : (
+          <>
+            <div className="space-y-3 mb-5">
+              <div>
+                <div className="font-display text-xl font-bold">{data.vendor?.business_name}</div>
+                <div className="text-sm text-muted-foreground">{data.vendor?.category}</div>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-2 text-sm">
+                <Info Icon={Users} label="Owner" value={data.vendor?.owner_name} />
+                <Info Icon={Mail} label="Email" value={data.vendor?.email} />
+                <Info Icon={Phone} label="WhatsApp" value={data.vendor?.whatsapp_number} />
+                <Info Icon={MapPin} label="City" value={data.vendor?.city} />
+                <Info Icon={Calendar} label="Joined" value={data.vendor ? new Date(data.vendor.created_at).toLocaleDateString() : "—"} />
+                <Info Icon={Calendar} label="Last sign-in" value={data.user?.last_sign_in_at ? new Date(data.user.last_sign_in_at).toLocaleString() : "—"} />
+              </div>
+              {data.vendor?.business_description && <p className="text-sm bg-muted/40 rounded-lg p-3">{data.vendor.business_description}</p>}
+              <Button onClick={() => onWarn(vendorId, data.vendor?.business_name ?? "")} className="bg-amber-500 hover:bg-amber-500/90 text-white"><AlertTriangle className="h-4 w-4 mr-1.5" />Send a warning</Button>
+            </div>
+
+            <Section title={`Listings (${data.products.length})`}>
+              {data.products.length === 0 ? <p className="text-sm text-muted-foreground">No listings.</p> : (
+                <div className="space-y-1.5">
+                  {data.products.map((p: any) => (
+                    <Link key={p.id} to="/product/$id" params={{ id: p.id }} className="flex justify-between text-sm hover:underline">
+                      <span className="truncate">{p.title} {p.is_sold && <span className="text-xs text-destructive">· sold</span>}</span>
+                      <span className="text-muted-foreground">R{p.price_zar}</span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </Section>
+
+            <Section title={`Warnings sent (${data.warnings.length})`}>
+              {data.warnings.length === 0 ? <p className="text-sm text-muted-foreground">None.</p> : (
+                <div className="space-y-2">
+                  {data.warnings.map((w: any) => (
+                    <div key={w.id} className="text-sm bg-amber-50 border border-amber-200 rounded-lg p-2">
+                      <div className="text-xs text-muted-foreground mb-1">{new Date(w.created_at).toLocaleString()} {w.acknowledged_at && "· acknowledged"}</div>
+                      <p className="whitespace-pre-line text-foreground/80">{w.message}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Section>
+
+            <Section title={`Reports against this store (${data.reports.length})`}>
+              {data.reports.length === 0 ? <p className="text-sm text-muted-foreground">None.</p> : (
+                <div className="space-y-2">
+                  {data.reports.map((r: any) => (
+                    <div key={r.id} className="text-sm border rounded-lg p-2">
+                      <div className="flex justify-between"><span className="font-medium">{r.reason}</span><span className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString()} · {r.status}</span></div>
+                      {r.note && <p className="text-xs text-foreground/70 mt-1">{r.note}</p>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Section>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Info({ Icon, label, value }: any) {
+  return (
+    <div className="flex items-start gap-2"><Icon className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+      <div className="min-w-0"><div className="text-xs text-muted-foreground">{label}</div><div className="truncate">{value || "—"}</div></div>
+    </div>
+  );
+}
+function Section({ title, children }: any) {
+  return <div className="mt-4 pt-4 border-t"><h4 className="font-semibold mb-2">{title}</h4>{children}</div>;
+}
+
+function ReportsTab({ qc }: { qc: ReturnType<typeof useQueryClient> }) {
+  const setStatus = useServerFn(setReportStatus);
+  const [filter, setFilter] = useState<"open" | "reviewed" | "dismissed" | "all">("open");
+  const { data: reports = [] } = useQuery({
+    queryKey: ["admin-reports", filter],
+    queryFn: async () => {
+      let q = (supabase.from("reports" as any) as any).select("*").order("created_at", { ascending: false }).limit(200);
+      if (filter !== "all") q = q.eq("status", filter);
+      const { data } = await q;
+      return data ?? [];
+    },
+  });
+  const update = async (id: string, status: "reviewed" | "dismissed") => {
+    try { await setStatus({ data: { report_id: id, status } }); toast.success("Updated"); qc.invalidateQueries({ queryKey: ["admin-reports"] }); }
+    catch (e: any) { toast.error(e.message); }
+  };
+  return (
+    <div>
+      <div className="flex gap-2 mb-4">
+        {(["open","reviewed","dismissed","all"] as const).map((f) => (
+          <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1 rounded-full text-xs font-semibold capitalize ${filter === f ? "bg-foreground text-background" : "bg-muted text-muted-foreground"}`}>{f}</button>
+        ))}
+      </div>
+      {reports.length === 0 ? <Empty label="reports" /> : (
+        <div className="space-y-2">
+          {reports.map((r: any) => (
+            <div key={r.id} className="rounded-xl border bg-card p-4">
+              <div className="flex flex-wrap justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-semibold flex items-center gap-2"><Flag className="h-4 w-4 text-destructive" />{r.reason}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {r.target_type === "product" ? <Link to="/product/$id" params={{ id: r.target_id }} className="underline">View listing</Link> : <Link to="/vendor/$id" params={{ id: r.target_id }} className="underline">View store</Link>}
+                    {" · "}{new Date(r.created_at).toLocaleString()}
+                  </div>
+                  {r.note && <p className="text-sm mt-2 text-foreground/80 whitespace-pre-line">{r.note}</p>}
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${r.status === "open" ? "bg-amber-100 text-amber-800" : r.status === "reviewed" ? "bg-green-100 text-green-800" : "bg-muted text-muted-foreground"}`}>{r.status}</span>
+                  {r.status === "open" && (
+                    <div className="flex gap-1 mt-1">
+                      <Button size="sm" variant="outline" onClick={() => update(r.id, "reviewed")}>Mark reviewed</Button>
+                      <Button size="sm" variant="ghost" onClick={() => update(r.id, "dismissed")}>Dismiss</Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
 function UsersTab() {
   const list = useServerFn(ownerListUsers);
-  const { data, isLoading } = useQuery({
-    queryKey: ["owner-users"],
-    queryFn: async () => list({ data: undefined as any }),
-  });
+  const { data, isLoading } = useQuery({ queryKey: ["owner-users"], queryFn: async () => list({ data: undefined as any }) });
   if (isLoading) return <div className="py-8 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></div>;
   const users = data?.users ?? [];
   if (users.length === 0) return <Empty label="users" />;
@@ -317,12 +484,10 @@ function AdminsTab() {
   };
   return (
     <div className="max-w-md space-y-3">
-      <p className="text-sm text-muted-foreground">Promote an existing user to admin so they can remove inappropriate listings. They must register first.</p>
+      <p className="text-sm text-muted-foreground">Promote a registered user to admin so they can moderate listings and reports.</p>
       <div className="flex gap-2">
         <Input type="email" placeholder="user@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-        <Button onClick={add} disabled={!email || loading} className="bg-[var(--deal)] hover:bg-[var(--deal)]/90 text-[color:var(--deal-foreground)]">
-          {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Add
-        </Button>
+        <Button onClick={add} disabled={!email || loading} className="bg-[var(--deal)] hover:bg-[var(--deal)]/90 text-[color:var(--deal-foreground)]">{loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Add</Button>
       </div>
     </div>
   );
