@@ -3,22 +3,23 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Trash2, ShieldCheck, Loader2, Crown, Users, Store, BarChart3, Eye, MessageCircle, Package, Flag, AlertTriangle, X, Mail, Phone, MapPin, Calendar } from "lucide-react";
+import { Trash2, ShieldCheck, Loader2, Crown, Users, Store, BarChart3, Eye, MessageCircle, Package, Flag, AlertTriangle, X, Mail, Phone, MapPin, Calendar, Check, Sparkles, Plus, BadgeCheck } from "lucide-react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar, Legend } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SiteHeader, SiteFooter } from "@/components/site-header";
-import { adminDeleteProduct, ownerDeleteVendor, ownerListUsers, promoteToRole, sendVendorWarning, setReportStatus, ownerStoreDetail } from "@/lib/marketplace.functions";
+import { adminDeleteProduct, ownerDeleteVendor, ownerListUsers, promoteToRole, sendVendorWarning, setReportStatus, ownerStoreDetail, setVendorStatus, createSaleCampaign, deleteSaleCampaign } from "@/lib/marketplace.functions";
 
 export const Route = createFileRoute("/_authenticated/admin")({ component: Admin });
 
 function Admin() {
   const { user, roles, isLoading } = useAuth();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<"overview" | "listings" | "stores" | "reports" | "users" | "admins">("overview");
+  const [tab, setTab] = useState<"overview" | "approvals" | "listings" | "stores" | "sales" | "reports" | "users" | "admins">("overview");
 
   const isAdmin = roles.includes("admin");
   const isOwner = roles.includes("owner");
@@ -35,8 +36,8 @@ function Admin() {
   }
 
   const tabs = isOwner
-    ? (["overview", "listings", "stores", "reports", "users", "admins"] as const)
-    : (["overview", "listings", "reports"] as const);
+    ? (["overview", "approvals", "listings", "stores", "sales", "reports", "users", "admins"] as const)
+    : (["overview", "approvals", "listings", "reports"] as const);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -65,8 +66,10 @@ function Admin() {
         </div>
 
         {tab === "overview" && <OverviewTab />}
+        {tab === "approvals" && <ApprovalsTab qc={qc} />}
         {tab === "listings" && <ListingsTab qc={qc} />}
         {tab === "stores" && isOwner && <StoresTab qc={qc} />}
+        {tab === "sales" && isOwner && <SalesTab qc={qc} />}
         {tab === "reports" && <ReportsTab qc={qc} />}
         {tab === "users" && isOwner && <UsersTab />}
         {tab === "admins" && isOwner && <AdminsTab />}
