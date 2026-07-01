@@ -9,6 +9,7 @@ const VendorInput = z.object({
   city: z.string().trim().min(2).max(80),
   business_description: z.string().trim().min(10).max(2000),
   category: z.string().trim().min(2).max(60),
+  logo_url: z.string().trim().max(1000).optional().nullable(),
 });
 
 export const submitVendorRegistration = createServerFn({ method: "POST" })
@@ -17,6 +18,8 @@ export const submitVendorRegistration = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId, claims } = context;
     const email = (claims.email as string | undefined) ?? "";
+    const bootstrapOwner = (process.env.OWNER_BOOTSTRAP_EMAIL ?? "sibandaniberyot99@gmail.com").toLowerCase();
+    const isBootstrap = email.toLowerCase() === bootstrapOwner;
     const { error } = await supabase.from("vendors").upsert({
       id: userId,
       business_name: data.business_name,
@@ -27,8 +30,39 @@ export const submitVendorRegistration = createServerFn({ method: "POST" })
       province: "",
       business_description: data.business_description,
       category: data.category,
-      status: "approved",
-    }, { onConflict: "id" });
+      logo_url: data.logo_url ?? null,
+      status: isBootstrap ? "approved" : "pending",
+      verified: isBootstrap,
+      is_official: isBootstrap,
+    } as any, { onConflict: "id" });
+    if (error) throw new Error(error.message);
+    return { ok: true, pending: !isBootstrap };
+  });
+
+const VendorProfileInput = z.object({
+  business_name: z.string().trim().min(2).max(120),
+  owner_name: z.string().trim().min(2).max(120),
+  whatsapp_number: z.string().trim().min(9).max(20).regex(/^[+0-9 ]+$/, "Digits only"),
+  city: z.string().trim().min(2).max(80),
+  business_description: z.string().trim().min(5).max(2000),
+  category: z.string().trim().min(2).max(60),
+  logo_url: z.string().trim().max(1000).optional().nullable(),
+});
+export const updateVendorProfile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => VendorProfileInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("vendors")
+      .update({
+        business_name: data.business_name,
+        owner_name: data.owner_name,
+        whatsapp_number: data.whatsapp_number,
+        city: data.city,
+        business_description: data.business_description,
+        category: data.category,
+        logo_url: data.logo_url ?? null,
+      } as any)
+      .eq("id", context.userId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -42,6 +76,7 @@ const ProductInput = z.object({
   images: z.array(z.string().trim().max(1000)).max(6).optional(),
   size: z.string().trim().max(40).optional().nullable(),
   color: z.string().trim().max(40).optional().nullable(),
+  stock: z.number().int().min(0).max(100000).optional().nullable(),
 });
 
 export const submitProduct = createServerFn({ method: "POST" })
@@ -66,6 +101,7 @@ export const submitProduct = createServerFn({ method: "POST" })
       images,
       size: data.size || null,
       color: data.color || null,
+      stock: data.stock ?? null,
       status: "approved",
       is_sold: false,
     } as any).select("id").single();
@@ -82,6 +118,7 @@ const ProductUpdateInput = z.object({
   images: z.array(z.string().trim().max(1000)).max(6),
   size: z.string().trim().max(40).optional().nullable(),
   color: z.string().trim().max(40).optional().nullable(),
+  stock: z.number().int().min(0).max(100000).optional().nullable(),
 });
 
 export const updateProduct = createServerFn({ method: "POST" })
@@ -95,6 +132,7 @@ export const updateProduct = createServerFn({ method: "POST" })
         price_zar: data.price_zar, category: data.category,
         images: data.images, image_url: cover,
         size: data.size || null, color: data.color || null,
+        stock: data.stock ?? null,
       } as any)
       .eq("id", data.product_id)
       .eq("vendor_id", context.userId);
@@ -136,6 +174,28 @@ export const ownerDeleteVendor = createServerFn({ method: "POST" })
     if (!isOwner) throw new Error("Only the owner can delete stores.");
     await context.supabase.from("products").delete().eq("vendor_id", data.vendor_id);
     const { error } = await context.supabase.from("vendors").delete().eq("id", data.vendor_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// Owner/admin: approve or decline a pending store
+const VendorStatusInput = z.object({
+  vendor_id: z.string().uuid(),
+  status: z.enum(["approved", "pending", "rejected"]),
+  reason: z.string().trim().max(500).optional(),
+});
+export const setVendorStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => VendorStatusInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const [{ data: isAdmin }, { data: isOwner }] = await Promise.all([
+      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" }),
+      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "owner" }),
+    ]);
+    if (!isAdmin && !isOwner) throw new Error("Forbidden");
+    const patch: any = { status: data.status, rejection_reason: data.reason ?? null };
+    if (data.status === "approved") patch.verified = true;
+    const { error } = await context.supabase.from("vendors").update(patch).eq("id", data.vendor_id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -203,7 +263,7 @@ export const promoteToRole = createServerFn({ method: "POST" })
     return { ok: true, userId: target.id };
   });
 
-// ====== Reviews ======
+// ====== Reviews (product) ======
 const ReviewInput = z.object({
   product_id: z.string().uuid(),
   rating: z.number().int().min(1).max(5),
@@ -224,6 +284,26 @@ export const submitReview = createServerFn({ method: "POST" })
       rating: data.rating,
       comment: data.comment,
     }, { onConflict: "product_id,user_id" });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// ====== Reviews (store) ======
+const StoreReviewInput = z.object({
+  vendor_id: z.string().uuid(),
+  rating: z.number().int().min(1).max(5),
+  comment: z.string().trim().max(1000).default(""),
+});
+export const submitStoreReview = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => StoreReviewInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await (context.supabase.from("store_reviews") as any).upsert({
+      vendor_id: data.vendor_id,
+      user_id: context.userId,
+      rating: data.rating,
+      comment: data.comment,
+    }, { onConflict: "vendor_id,user_id" });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -305,7 +385,7 @@ export const acknowledgeWarning = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-// Owner: full store detail with owner info + listings + recent events
+// Owner: full store detail
 export const ownerStoreDetail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ vendor_id: z.string().uuid() }).parse(d))
@@ -334,4 +414,66 @@ export const ownerStoreDetail = createServerFn({ method: "POST" })
         last_sign_in_at: authUser.data.user.last_sign_in_at ?? null,
       } : null,
     };
+  });
+
+// ====== Sale campaigns ======
+const CampaignInput = z.object({
+  title: z.string().trim().min(2).max(120),
+  description: z.string().trim().max(1000).default(""),
+  discount_pct: z.number().int().min(1).max(90),
+  starts_at: z.string(),
+  ends_at: z.string(),
+});
+export const createSaleCampaign = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => CampaignInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const [{ data: isAdmin }, { data: isOwner }] = await Promise.all([
+      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" }),
+      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "owner" }),
+    ]);
+    if (!isAdmin && !isOwner) throw new Error("Forbidden");
+    const { data: camp, error } = await (context.supabase.from("sale_campaigns") as any).insert({
+      title: data.title, description: data.description,
+      discount_pct: data.discount_pct,
+      starts_at: data.starts_at, ends_at: data.ends_at,
+      created_by: context.userId,
+    }).select("id").single();
+    if (error) throw new Error(error.message);
+    // Auto-invite every approved vendor
+    const { data: vendors } = await context.supabase.from("vendors").select("id").eq("status", "approved");
+    if (vendors && vendors.length > 0) {
+      const rows = vendors.map((v: any) => ({ campaign_id: camp.id, vendor_id: v.id, status: "invited" }));
+      await (context.supabase.from("sale_participants") as any).insert(rows);
+    }
+    return { ok: true, id: camp.id };
+  });
+
+export const deleteSaleCampaign = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ campaign_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const [{ data: isAdmin }, { data: isOwner }] = await Promise.all([
+      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" }),
+      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "owner" }),
+    ]);
+    if (!isAdmin && !isOwner) throw new Error("Forbidden");
+    const { error } = await (context.supabase.from("sale_campaigns") as any).delete().eq("id", data.campaign_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const respondToCampaign = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({
+    campaign_id: z.string().uuid(),
+    status: z.enum(["joined", "declined"]),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await (context.supabase.from("sale_participants") as any)
+      .update({ status: data.status })
+      .eq("campaign_id", data.campaign_id)
+      .eq("vendor_id", context.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
