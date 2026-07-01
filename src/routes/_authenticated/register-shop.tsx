@@ -66,8 +66,9 @@ function RegisterShop() {
   const onSubmit = async () => {
     setLoading(true);
     try {
-      await submit({ data: form });
-      toast.success("Welcome to Niberdealz! Your store is live.");
+      const res = await submit({ data: form });
+      if (res?.pending) toast.success("Store submitted! The CEO will review and approve it shortly.");
+      else toast.success("Welcome to Niberdealz! Your store is live.");
       navigate({ to: "/dashboard" });
     } catch (e: any) {
       toast.error(e.message ?? "Submission failed");

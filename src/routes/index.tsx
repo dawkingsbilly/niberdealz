@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Search, MessageCircle, GraduationCap, Tag, ShieldCheck, Truck, BadgeCheck, Users, Sparkles, Store, Handshake } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SiteHeader, SiteFooter } from "@/components/site-header";
@@ -39,28 +39,87 @@ function Home() {
     return () => clearInterval(t);
   }, []);
 
-  const { data: products = [], isLoading } = useQuery({
-    queryKey: ["products", "approved", q, category],
+  const { data, isLoading } = useQuery({
+    queryKey: ["homefeed", q, category],
     queryFn: async () => {
       let query = supabase
         .from("products")
-        .select("id, title, price_zar, category, image_url, vendors(business_name, city)")
+        .select("id, title, price_zar, category, image_url, stock, is_sold, vendor_id, vendors!inner(business_name, city, verified, is_official, status)")
         .eq("status", "approved")
+        .eq("vendors.status", "approved")
         .order("created_at", { ascending: false })
-        .limit(48);
+        .limit(96);
       if (q.trim()) query = query.ilike("title", `%${q.trim()}%`);
       if (category) query = query.eq("category", category);
-      const { data, error } = await query;
+      const [{ data: products, error }, activeSales, reviews] = await Promise.all([
+        query,
+        (supabase.from("sale_campaigns" as any) as any)
+          .select("id, discount_pct, starts_at, ends_at")
+          .lte("starts_at", new Date().toISOString())
+          .gte("ends_at", new Date().toISOString()),
+        supabase.from("product_reviews").select("product_id, rating"),
+      ]);
       if (error) throw error;
-      return (data ?? []) as unknown as ProductCardData[];
+
+      const activeCampaignIds: string[] = (activeSales.data ?? []).map((c: any) => c.id);
+      const bestDiscountByCampaign = new Map<string, number>(
+        (activeSales.data ?? []).map((c: any) => [c.id, c.discount_pct as number])
+      );
+
+      let joinedByVendor = new Map<string, number>(); // vendor_id -> best discount pct
+      if (activeCampaignIds.length > 0) {
+        const { data: parts } = await (supabase.from("sale_participants" as any) as any)
+          .select("vendor_id, campaign_id, status")
+          .in("campaign_id", activeCampaignIds)
+          .eq("status", "joined");
+        (parts ?? []).forEach((p: any) => {
+          const d = bestDiscountByCampaign.get(p.campaign_id) ?? 0;
+          const prev = joinedByVendor.get(p.vendor_id) ?? 0;
+          if (d > prev) joinedByVendor.set(p.vendor_id, d);
+        });
+      }
+
+      // aggregate reviews
+      const agg = new Map<string, { sum: number; n: number }>();
+      (reviews.data ?? []).forEach((r: any) => {
+        const cur = agg.get(r.product_id) ?? { sum: 0, n: 0 };
+        cur.sum += r.rating; cur.n += 1;
+        agg.set(r.product_id, cur);
+      });
+
+      const enriched = (products ?? []).map((p: any) => {
+        const discount = joinedByVendor.get(p.vendor_id) ?? 0;
+        const a = agg.get(p.id);
+        return {
+          ...p,
+          discount_pct: discount || null,
+          avg_rating: a ? a.sum / a.n : null,
+          review_count: a?.n ?? 0,
+        };
+      }) as (ProductCardData & { vendor_id: string })[];
+
+      return enriched;
     },
   });
+
+  const products = useMemo(() => {
+    const list = data ?? [];
+    // Ordering: on-sale first, then NIBER-DEALZ STORE (is_official), then everyone else (newest first — DB order preserved)
+    return [...list].sort((a: any, b: any) => {
+      const aSale = a.discount_pct ? 1 : 0;
+      const bSale = b.discount_pct ? 1 : 0;
+      if (aSale !== bSale) return bSale - aSale;
+      const aOff = a.vendors?.is_official ? 1 : 0;
+      const bOff = b.vendors?.is_official ? 1 : 0;
+      if (aOff !== bOff) return bOff - aOff;
+      return 0;
+    });
+  }, [data]);
 
   return (
     <div className="min-h-screen flex flex-col">
       <SiteHeader />
 
-      {/* Hero slideshow */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0">
           {SLIDES.map((img, i) => (
@@ -99,7 +158,6 @@ function Home() {
             </Button>
           </div>
 
-          {/* Slide dots */}
           <div className="mt-8 flex justify-center gap-1.5">
             {SLIDES.map((_, i) => (
               <button key={i} onClick={() => setSlide(i)} aria-label={`Slide ${i + 1}`}
@@ -109,7 +167,6 @@ function Home() {
         </div>
       </section>
 
-      {/* Trust strip */}
       <section className="border-y border-border bg-background">
         <div className="container mx-auto px-4 py-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
           {[
@@ -126,7 +183,6 @@ function Home() {
         </div>
       </section>
 
-      {/* Category chips */}
       <section className="border-b border-border bg-card/60">
         <div className="container mx-auto px-4 py-4 flex gap-2 overflow-x-auto">
           <button
@@ -145,7 +201,7 @@ function Home() {
         <div className="mb-6 flex items-end justify-between gap-4">
           <div>
             <h2 className="font-display text-2xl md:text-3xl font-bold flex items-center gap-2"><Tag className="h-6 w-6 text-[color:var(--deal)]" />Fresh listings</h2>
-            <p className="text-muted-foreground text-sm">Latest from students near you.</p>
+            <p className="text-muted-foreground text-sm">Sales first, then NIBER-DEALZ STORE, then latest.</p>
           </div>
           <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex"><Link to="/auth" search={{ mode: "register" }}>Become a seller <ArrowRight className="ml-1 h-4 w-4" /></Link></Button>
         </div>
@@ -170,7 +226,6 @@ function Home() {
         )}
       </section>
 
-      {/* How it works */}
       <section className="bg-secondary/40 border-t border-border">
         <div className="container mx-auto px-4 py-14">
           <div className="text-center mb-10">
@@ -193,7 +248,6 @@ function Home() {
         </div>
       </section>
 
-      {/* Sell CTA */}
       <section className="container mx-auto px-4 py-14">
         <div className="rounded-3xl bg-gradient-to-br from-foreground to-foreground/80 text-background p-8 md:p-12 grid md:grid-cols-[1fr_auto] items-center gap-6 shadow-[var(--shadow-card)]">
           <div>
@@ -208,7 +262,6 @@ function Home() {
         </div>
       </section>
 
-      {/* Stats */}
       <section className="border-t border-border bg-background">
         <div className="container mx-auto px-4 py-10 grid grid-cols-3 gap-4 text-center">
           {[

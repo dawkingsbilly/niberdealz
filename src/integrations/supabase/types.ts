@@ -161,6 +161,7 @@ export type Database = {
           rejection_reason: string | null
           size: string | null
           status: Database["public"]["Enums"]["product_status"]
+          stock: number | null
           title: string
           updated_at: string
           vendor_id: string
@@ -180,6 +181,7 @@ export type Database = {
           rejection_reason?: string | null
           size?: string | null
           status?: Database["public"]["Enums"]["product_status"]
+          stock?: number | null
           title: string
           updated_at?: string
           vendor_id: string
@@ -199,6 +201,7 @@ export type Database = {
           rejection_reason?: string | null
           size?: string | null
           status?: Database["public"]["Enums"]["product_status"]
+          stock?: number | null
           title?: string
           updated_at?: string
           vendor_id?: string
@@ -245,6 +248,113 @@ export type Database = {
           target_type?: string
         }
         Relationships: []
+      }
+      sale_campaigns: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string
+          discount_pct: number
+          ends_at: string
+          id: string
+          starts_at: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string
+          discount_pct: number
+          ends_at: string
+          id?: string
+          starts_at: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string
+          discount_pct?: number
+          ends_at?: string
+          id?: string
+          starts_at?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      sale_participants: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          id: string
+          status: string
+          vendor_id: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          id?: string
+          status?: string
+          vendor_id: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          status?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_participants_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "sale_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_participants_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      store_reviews: {
+        Row: {
+          comment: string
+          created_at: string
+          id: string
+          rating: number
+          user_id: string
+          vendor_id: string
+        }
+        Insert: {
+          comment?: string
+          created_at?: string
+          id?: string
+          rating: number
+          user_id: string
+          vendor_id: string
+        }
+        Update: {
+          comment?: string
+          created_at?: string
+          id?: string
+          rating?: number
+          user_id?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_reviews_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -313,6 +423,7 @@ export type Database = {
           created_at: string
           email: string
           id: string
+          is_official: boolean
           logo_url: string | null
           owner_name: string
           plan: Database["public"]["Enums"]["plan_tier"]
@@ -321,6 +432,7 @@ export type Database = {
           rejection_reason: string | null
           status: Database["public"]["Enums"]["vendor_status"]
           updated_at: string
+          verified: boolean
           whatsapp_number: string
         }
         Insert: {
@@ -333,6 +445,7 @@ export type Database = {
           created_at?: string
           email: string
           id: string
+          is_official?: boolean
           logo_url?: string | null
           owner_name: string
           plan?: Database["public"]["Enums"]["plan_tier"]
@@ -341,6 +454,7 @@ export type Database = {
           rejection_reason?: string | null
           status?: Database["public"]["Enums"]["vendor_status"]
           updated_at?: string
+          verified?: boolean
           whatsapp_number: string
         }
         Update: {
@@ -353,6 +467,7 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
+          is_official?: boolean
           logo_url?: string | null
           owner_name?: string
           plan?: Database["public"]["Enums"]["plan_tier"]
@@ -361,6 +476,7 @@ export type Database = {
           rejection_reason?: string | null
           status?: Database["public"]["Enums"]["vendor_status"]
           updated_at?: string
+          verified?: boolean
           whatsapp_number?: string
         }
         Relationships: []

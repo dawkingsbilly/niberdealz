@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2, Package, Tag, ExternalLink, Pencil, AlertTriangle, X } from "lucide-react";
+import { Loader2, Plus, Trash2, Package, Tag, ExternalLink, Pencil, AlertTriangle, X, Store, Copy, ClipboardList, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { SiteHeader, SiteFooter } from "@/components/site-header";
 import { CATEGORIES } from "@/lib/constants";
-import { submitProduct, setProductSold, updateProduct, acknowledgeWarning } from "@/lib/marketplace.functions";
+import { submitProduct, setProductSold, updateProduct, acknowledgeWarning, updateVendorProfile, respondToCampaign } from "@/lib/marketplace.functions";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({ component: Dashboard });
 
@@ -21,15 +21,15 @@ const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp", "image/gif", "ima
 const EXT_BY_MIME: Record<string, string> = { "image/jpeg":"jpg","image/png":"png","image/webp":"webp","image/gif":"gif","image/avif":"avif" };
 const MAX_IMAGES = 6;
 
-async function uploadImages(files: File[], userId: string): Promise<string[]> {
+async function uploadImages(files: File[], userId: string, bucket = "product-images"): Promise<string[]> {
   const urls: string[] = [];
   for (const f of files) {
     if (!ALLOWED_MIME.includes(f.type)) throw new Error("Use JPG, PNG, WEBP, GIF or AVIF.");
     if (f.size > 5 * 1024 * 1024) throw new Error("Each image must be under 5 MB.");
     const path = `${userId}/${crypto.randomUUID()}.${EXT_BY_MIME[f.type]}`;
-    const { error: uErr } = await supabase.storage.from("product-images").upload(path, f, { upsert: false, contentType: f.type });
+    const { error: uErr } = await supabase.storage.from(bucket).upload(path, f, { upsert: false, contentType: f.type });
     if (uErr) throw uErr;
-    const { data: signed, error: sErr } = await supabase.storage.from("product-images").createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
+    const { data: signed, error: sErr } = await supabase.storage.from(bucket).createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
     if (sErr) throw sErr;
     urls.push(signed.signedUrl);
   }
@@ -44,13 +44,14 @@ function Dashboard() {
   const updateFn = useServerFn(updateProduct);
   const setSoldFn = useServerFn(setProductSold);
   const ackFn = useServerFn(acknowledgeWarning);
+  const respondFn = useServerFn(respondToCampaign);
 
   const { data: vendor, isLoading: vLoading } = useQuery({
     queryKey: ["vendor-self", user?.id],
     enabled: !!user,
     queryFn: async () => {
       const { data } = await supabase.from("vendors").select("*").eq("id", user!.id).maybeSingle();
-      return data;
+      return data as any;
     },
   });
 
@@ -76,11 +77,21 @@ function Dashboard() {
     },
   });
 
+  const { data: campaigns = [] } = useQuery({
+    queryKey: ["vendor-campaigns", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data: parts } = await (supabase.from("sale_participants" as any) as any).select("*, sale_campaigns(*)").eq("vendor_id", user!.id).order("created_at", { ascending: false });
+      return parts ?? [];
+    },
+  });
+
   const [showAdd, setShowAdd] = useState(false);
   const [adding, setAdding] = useState(false);
-  const [newP, setNewP] = useState({ title: "", description: "", price_zar: "", category: "", size: "", color: "" });
+  const [newP, setNewP] = useState({ title: "", description: "", price_zar: "", category: "", size: "", color: "", stock: "" });
   const [newFiles, setNewFiles] = useState<File[]>([]);
   const [editing, setEditing] = useState<any | null>(null);
+  const [showProfile, setShowProfile] = useState(false);
 
   if (vLoading || !vendor) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>;
 
@@ -94,9 +105,10 @@ function Dashboard() {
         price_zar: Number(newP.price_zar), category: newP.category,
         image_url: images[0], images,
         size: newP.size || null, color: newP.color || null,
+        stock: newP.stock === "" ? null : Number(newP.stock),
       }});
       toast.success("Listing live!");
-      setNewP({ title: "", description: "", price_zar: "", category: "", size: "", color: "" });
+      setNewP({ title: "", description: "", price_zar: "", category: "", size: "", color: "", stock: "" });
       setNewFiles([]);
       setShowAdd(false);
       qc.invalidateQueries({ queryKey: ["vendor-products"] });
@@ -120,30 +132,80 @@ function Dashboard() {
     catch (e: any) { toast.error(e.message); }
   };
 
+  const respond = async (campaign_id: string, status: "joined" | "declined") => {
+    try { await respondFn({ data: { campaign_id, status } }); qc.invalidateQueries({ queryKey: ["vendor-campaigns"] }); toast.success(status === "joined" ? "You joined the sale!" : "Declined."); }
+    catch (e: any) { toast.error(e.message); }
+  };
+
+  const copyLink = () => {
+    if (typeof window === "undefined") return;
+    const url = `${window.location.origin}/vendor/${vendor.id}`;
+    navigator.clipboard?.writeText(url);
+    toast.success("Store link copied");
+  };
+
+  const activeInvites = (campaigns as any[]).filter(c => c.status === "invited" && c.sale_campaigns && new Date(c.sale_campaigns.ends_at) > new Date());
+  const joined = (campaigns as any[]).filter(c => c.status === "joined" && c.sale_campaigns && new Date(c.sale_campaigns.ends_at) > new Date());
+
   return (
     <div className="min-h-screen flex flex-col">
       <SiteHeader />
       <div className="container mx-auto px-4 py-8 flex-1 max-w-6xl">
         <div className="rounded-2xl bg-card border border-border p-6 mb-6 shadow-[var(--shadow-card)]">
-          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
-            <div className="min-w-0">
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="h-16 w-16 rounded-2xl overflow-hidden bg-muted flex items-center justify-center shrink-0">
+              {vendor.logo_url ? <img src={vendor.logo_url} alt="" className="h-full w-full object-cover" /> : <Store className="h-8 w-8 text-muted-foreground" />}
+            </div>
+            <div className="min-w-0 flex-1">
               <h1 className="font-display text-2xl font-bold truncate">{vendor.business_name}</h1>
               <p className="text-muted-foreground text-sm">{vendor.category} · {vendor.city} · WhatsApp {vendor.whatsapp_number}</p>
+              {vendor.status === "pending" && <p className="text-xs text-amber-600 mt-1">⏳ Awaiting CEO approval — your store isn't public yet.</p>}
+              {vendor.status === "rejected" && <p className="text-xs text-destructive mt-1">Your store was declined. {vendor.rejection_reason}</p>}
             </div>
-            <Button asChild variant="outline" size="sm"><Link to="/vendor/$id" params={{ id: vendor.id }}><ExternalLink className="h-4 w-4 mr-1.5" />View shop</Link></Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" onClick={copyLink}><Copy className="h-4 w-4 mr-1.5" />Copy link</Button>
+              <Button variant="outline" size="sm" onClick={() => setShowProfile((s) => !s)}><Pencil className="h-4 w-4 mr-1.5" />Edit profile</Button>
+              <Button asChild variant="outline" size="sm"><Link to="/vendor/$id" params={{ id: vendor.id }}><ExternalLink className="h-4 w-4 mr-1.5" />View shop</Link></Button>
+            </div>
           </div>
         </div>
 
+        {showProfile && (
+          <ProfileEditor vendor={vendor} onClose={() => setShowProfile(false)} onSaved={() => { setShowProfile(false); qc.invalidateQueries({ queryKey: ["vendor-self"] }); }} />
+        )}
+
         {warnings.filter((w: any) => !w.acknowledged_at).length > 0 && (
-          <div className="rounded-2xl border-2 border-amber-500 bg-amber-50 p-4 mb-6 space-y-3">
-            <div className="flex items-center gap-2 font-semibold text-amber-900"><AlertTriangle className="h-5 w-5" />Warnings from Niberdealz</div>
+          <div className="rounded-2xl border-2 border-amber-500 bg-amber-50 dark:bg-amber-950/30 p-4 mb-6 space-y-3">
+            <div className="flex items-center gap-2 font-semibold text-amber-900 dark:text-amber-200"><AlertTriangle className="h-5 w-5" />Warnings from Niberdealz</div>
             {warnings.filter((w: any) => !w.acknowledged_at).map((w: any) => (
-              <div key={w.id} className="rounded-lg bg-white p-3 border border-amber-200">
+              <div key={w.id} className="rounded-lg bg-card p-3 border border-amber-200">
                 <p className="text-sm whitespace-pre-line text-foreground">{w.message}</p>
                 <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
                   <span>{new Date(w.created_at).toLocaleString()}</span>
                   <Button size="sm" variant="outline" onClick={() => ack(w.id)}>I understand</Button>
                 </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {(activeInvites.length > 0 || joined.length > 0) && (
+          <div className="rounded-2xl border-2 border-[color:var(--deal)] bg-[color:var(--deal)]/5 p-4 mb-6 space-y-3">
+            <div className="flex items-center gap-2 font-semibold"><Sparkles className="h-5 w-5 text-[color:var(--deal)]" />Sales campaigns</div>
+            {activeInvites.map((c: any) => (
+              <div key={c.id} className="rounded-lg bg-card p-3 border">
+                <div className="font-semibold">{c.sale_campaigns.title} · -{c.sale_campaigns.discount_pct}%</div>
+                <p className="text-xs text-muted-foreground">Runs {new Date(c.sale_campaigns.starts_at).toLocaleDateString()} — {new Date(c.sale_campaigns.ends_at).toLocaleDateString()}</p>
+                {c.sale_campaigns.description && <p className="text-sm mt-1 text-foreground/80">{c.sale_campaigns.description}</p>}
+                <div className="flex justify-end gap-2 mt-2">
+                  <Button size="sm" variant="ghost" onClick={() => respond(c.campaign_id, "declined")}>Decline</Button>
+                  <Button size="sm" className="bg-[var(--deal)] hover:bg-[var(--deal)]/90 text-[color:var(--deal-foreground)]" onClick={() => respond(c.campaign_id, "joined")}>Join sale</Button>
+                </div>
+              </div>
+            ))}
+            {joined.map((c: any) => (
+              <div key={c.id} className="rounded-lg bg-card p-3 border text-sm">
+                ✅ You joined <strong>{c.sale_campaigns.title}</strong> (-{c.sale_campaigns.discount_pct}%). Buyers see discounted prices on all your listings until {new Date(c.sale_campaigns.ends_at).toLocaleDateString()}.
               </div>
             ))}
           </div>
@@ -177,7 +239,10 @@ function Dashboard() {
                 </div>
                 <div className="p-4 space-y-2">
                   <div className="font-semibold line-clamp-1">{p.title}</div>
-                  <div className="text-sm text-muted-foreground flex items-center gap-1.5"><Tag className="h-3.5 w-3.5" />R{p.price_zar} · {p.category}</div>
+                  <div className="text-sm text-muted-foreground flex items-center gap-1.5 flex-wrap">
+                    <Tag className="h-3.5 w-3.5" />R{p.price_zar} · {p.category}
+                    {typeof p.stock === "number" && <span className="inline-flex items-center gap-1"><ClipboardList className="h-3 w-3" />{p.stock} in stock</span>}
+                  </div>
                   <div className="flex items-center justify-between pt-2 border-t">
                     <label className="flex items-center gap-2 text-xs">
                       <Switch checked={!!p.is_sold} onCheckedChange={(v) => toggleSold(p.id, v)} />
@@ -220,6 +285,7 @@ function ProductForm({ value, onChange, files, setFiles, existingUrls, onRemoveE
           {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
       </div>
+      <div className="space-y-1.5"><Label>Stock quantity (leave blank if not applicable)</Label><Input type="number" min="0" step="1" value={value.stock ?? ""} onChange={(e) => onChange({ ...value, stock: e.target.value })} placeholder="e.g. 10" /></div>
       <div className="space-y-1.5"><Label>Size (optional)</Label><Input value={value.size} onChange={(e) => onChange({ ...value, size: e.target.value })} placeholder="e.g. UK 9, M, Large" /></div>
       <div className="space-y-1.5"><Label>Color (optional)</Label><Input value={value.color} onChange={(e) => onChange({ ...value, color: e.target.value })} placeholder="e.g. Black" /></div>
       <div className="space-y-1.5 sm:col-span-2"><Label>Description *</Label><Textarea rows={4} value={value.description} onChange={(e) => onChange({ ...value, description: e.target.value })} placeholder="Condition, details, where to meet…" /></div>
@@ -260,6 +326,7 @@ function EditDialog({ product, userId, updateFn, onClose, onSaved }: any) {
     title: product.title, description: product.description,
     price_zar: String(product.price_zar), category: product.category,
     size: product.size ?? "", color: product.color ?? "",
+    stock: product.stock === null || product.stock === undefined ? "" : String(product.stock),
   });
   const [existing, setExisting] = useState<string[]>(product.images?.length ? product.images : (product.image_url ? [product.image_url] : []));
   const [files, setFiles] = useState<File[]>([]);
@@ -276,6 +343,7 @@ function EditDialog({ product, userId, updateFn, onClose, onSaved }: any) {
         title: value.title, description: value.description,
         price_zar: Number(value.price_zar), category: value.category,
         images, size: value.size || null, color: value.color || null,
+        stock: value.stock === "" ? null : Number(value.stock),
       }});
       toast.success("Listing updated");
       onSaved();
@@ -295,6 +363,76 @@ function EditDialog({ product, userId, updateFn, onClose, onSaved }: any) {
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button onClick={save} disabled={saving}>{saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Save changes</Button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function ProfileEditor({ vendor, onClose, onSaved }: { vendor: any; onClose: () => void; onSaved: () => void }) {
+  const updateFn = useServerFn(updateVendorProfile);
+  const [form, setForm] = useState({
+    business_name: vendor.business_name ?? "",
+    owner_name: vendor.owner_name ?? "",
+    whatsapp_number: vendor.whatsapp_number ?? "",
+    city: vendor.city ?? "",
+    category: vendor.category ?? "",
+    business_description: vendor.business_description ?? "",
+    logo_url: vendor.logo_url ?? "",
+  });
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      let logo_url = form.logo_url;
+      if (logoFile) {
+        const [url] = await uploadImages([logoFile], vendor.id, "vendor-logos");
+        logo_url = url;
+      }
+      await updateFn({ data: { ...form, logo_url: logo_url || null } });
+      toast.success("Store profile updated");
+      onSaved();
+    } catch (e: any) { toast.error(e.message); }
+    finally { setSaving(false); }
+  };
+
+  const upd = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
+
+  return (
+    <div className="rounded-2xl bg-card border border-border p-6 mb-6 shadow-[var(--shadow-card)]">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-display text-lg font-bold">Edit store profile</h3>
+        <Button size="sm" variant="ghost" onClick={onClose}><X className="h-4 w-4" /></Button>
+      </div>
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label>Store profile picture / logo *</Label>
+          <div className="flex items-center gap-3">
+            <div className="h-16 w-16 rounded-xl overflow-hidden bg-muted flex items-center justify-center shrink-0">
+              {logoFile ? <img src={URL.createObjectURL(logoFile)} className="h-full w-full object-cover" alt="" /> :
+                form.logo_url ? <img src={form.logo_url} className="h-full w-full object-cover" alt="" /> :
+                <Store className="h-7 w-7 text-muted-foreground" />}
+            </div>
+            <Input type="file" accept="image/*" onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)} />
+          </div>
+        </div>
+        <div className="space-y-1.5"><Label>Store / business name</Label><Input value={form.business_name} onChange={(e) => upd("business_name", e.target.value)} /></div>
+        <div className="space-y-1.5"><Label>Owner / your name</Label><Input value={form.owner_name} onChange={(e) => upd("owner_name", e.target.value)} /></div>
+        <div className="space-y-1.5"><Label>WhatsApp number</Label><Input value={form.whatsapp_number} onChange={(e) => upd("whatsapp_number", e.target.value)} /></div>
+        <div className="space-y-1.5"><Label>City / campus</Label><Input value={form.city} onChange={(e) => upd("city", e.target.value)} /></div>
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label>Main category</Label>
+          <select className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.category} onChange={(e) => upd("category", e.target.value)}>
+            <option value="">Select</option>
+            {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+        <div className="space-y-1.5 sm:col-span-2"><Label>About your store</Label><Textarea rows={4} value={form.business_description} onChange={(e) => upd("business_description", e.target.value)} /></div>
+      </div>
+      <div className="flex gap-2 mt-4 justify-end">
+        <Button variant="outline" onClick={onClose}>Cancel</Button>
+        <Button onClick={save} disabled={saving}>{saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Save profile</Button>
       </div>
     </div>
   );
