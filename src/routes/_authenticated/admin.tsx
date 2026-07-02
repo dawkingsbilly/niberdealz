@@ -19,7 +19,7 @@ export const Route = createFileRoute("/_authenticated/admin")({ component: Admin
 function Admin() {
   const { user, roles, isLoading } = useAuth();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<"overview" | "approvals" | "listings" | "stores" | "sales" | "reports" | "users" | "admins">("overview");
+  const [tab, setTab] = useState<"overview" | "approvals" | "listings" | "stores" | "sales" | "broadcasts" | "reports" | "users" | "admins">("overview");
 
   const isAdmin = roles.includes("admin");
   const isOwner = roles.includes("owner");
