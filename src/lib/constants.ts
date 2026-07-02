@@ -1,9 +1,11 @@
 export const SITE_NAME = "Niberdealz";
-export const SITE_TAGLINE = "The student marketplace. Buy and sell on WhatsApp.";
+export const SITE_TAGLINE = "The marketplace. Buy and sell on WhatsApp.";
 
 export const CONTACT_PHONE = "068 751 0600";
 export const CONTACT_EMAIL = "niberdealz@gmail.com";
 
+// Public WhatsApp channel — every new signup is nudged to follow it.
+export const WHATSAPP_CHANNEL_URL = "https://wa.me/channel/0029VaOb9f1KbYMSEsUT6T46";
 
 export const CATEGORIES = [
   "Sneakers",
