@@ -10,6 +10,9 @@ const VendorInput = z.object({
   business_description: z.string().trim().min(10).max(2000),
   category: z.string().trim().min(2).max(60),
   logo_url: z.string().trim().max(1000).optional().nullable(),
+  is_formal_business: z.boolean().optional().default(false),
+  website_url: z.string().trim().url().max(500).optional().nullable().or(z.literal("")),
+  checkout_pref: z.enum(["whatsapp", "website", "both"]).optional().default("whatsapp"),
 });
 
 export const submitVendorRegistration = createServerFn({ method: "POST" })
@@ -31,6 +34,9 @@ export const submitVendorRegistration = createServerFn({ method: "POST" })
       business_description: data.business_description,
       category: data.category,
       logo_url: data.logo_url ?? null,
+      is_formal_business: data.is_formal_business ?? false,
+      website_url: data.website_url || null,
+      checkout_pref: data.checkout_pref ?? "whatsapp",
       status: isBootstrap ? "approved" : "pending",
       verified: isBootstrap,
       is_official: isBootstrap,
@@ -77,6 +83,7 @@ const ProductInput = z.object({
   size: z.string().trim().max(40).optional().nullable(),
   color: z.string().trim().max(40).optional().nullable(),
   stock: z.number().int().min(0).max(100000).optional().nullable(),
+  checkout_url: z.string().trim().url().max(500).optional().nullable().or(z.literal("")),
 });
 
 export const submitProduct = createServerFn({ method: "POST" })
@@ -102,6 +109,7 @@ export const submitProduct = createServerFn({ method: "POST" })
       size: data.size || null,
       color: data.color || null,
       stock: data.stock ?? null,
+      checkout_url: data.checkout_url || null,
       status: "approved",
       is_sold: false,
     } as any).select("id").single();
@@ -477,3 +485,88 @@ export const respondToCampaign = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// ====== Profile (buyer/general users) ======
+const ProfileInput = z.object({
+  full_name: z.string().trim().min(1).max(120),
+  city: z.string().trim().min(1).max(80),
+  phone: z.string().trim().max(30).optional().nullable(),
+});
+export const updateMyProfile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => ProfileInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await (context.supabase.from("profiles") as any).upsert({
+      id: context.userId,
+      full_name: data.full_name,
+      city: data.city,
+      phone: data.phone ?? null,
+    }, { onConflict: "id" });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// ====== CEO email broadcasts ======
+const BroadcastInput = z.object({
+  audience: z.enum(["vendors", "buyers", "all"]),
+  subject: z.string().trim().min(2).max(200),
+  body: z.string().trim().min(5).max(20000),
+});
+export const createBroadcast = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => BroadcastInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const [{ data: isAdmin }, { data: isOwner }] = await Promise.all([
+      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" }),
+      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "owner" }),
+    ]);
+    if (!isAdmin && !isOwner) throw new Error("Only staff can send broadcasts.");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Resolve recipient emails
+    const vendorIdsSet = new Set<string>();
+    const { data: vendorRows } = await supabaseAdmin.from("vendors").select("id, email").eq("status", "approved");
+    (vendorRows ?? []).forEach((v: any) => vendorIdsSet.add(v.id));
+
+    const { data: users } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    const allUsers = users.users;
+
+    let recipients: string[] = [];
+    if (data.audience === "vendors") {
+      recipients = allUsers.filter((u) => vendorIdsSet.has(u.id)).map((u) => u.email ?? "").filter(Boolean);
+    } else if (data.audience === "buyers") {
+      recipients = allUsers.filter((u) => !vendorIdsSet.has(u.id)).map((u) => u.email ?? "").filter(Boolean);
+    } else {
+      recipients = allUsers.map((u) => u.email ?? "").filter(Boolean);
+    }
+    recipients = Array.from(new Set(recipients.map((e) => e.toLowerCase())));
+
+    const { data: row, error } = await (supabaseAdmin.from("broadcasts") as any).insert({
+      audience: data.audience,
+      subject: data.subject,
+      body: data.body,
+      recipients,
+      recipient_count: recipients.length,
+      status: "ready",
+      created_by: context.userId,
+    }).select("id").single();
+    if (error) throw new Error(error.message);
+    return { ok: true, id: row.id, recipients, count: recipients.length };
+  });
+
+export const listBroadcasts = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const [{ data: isAdmin }, { data: isOwner }] = await Promise.all([
+      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" }),
+      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "owner" }),
+    ]);
+    if (!isAdmin && !isOwner) throw new Error("Forbidden");
+    const { data } = await (context.supabase.from("broadcasts") as any)
+      .select("id, audience, subject, body, recipient_count, status, created_at")
+      .order("created_at", { ascending: false })
+      .limit(50);
+    return { broadcasts: data ?? [] };
+  });
+

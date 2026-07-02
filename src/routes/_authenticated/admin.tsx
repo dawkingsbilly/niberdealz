@@ -12,14 +12,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SiteHeader, SiteFooter } from "@/components/site-header";
-import { adminDeleteProduct, ownerDeleteVendor, ownerListUsers, promoteToRole, sendVendorWarning, setReportStatus, ownerStoreDetail, setVendorStatus, createSaleCampaign, deleteSaleCampaign } from "@/lib/marketplace.functions";
+import { adminDeleteProduct, ownerDeleteVendor, ownerListUsers, promoteToRole, sendVendorWarning, setReportStatus, ownerStoreDetail, setVendorStatus, createSaleCampaign, deleteSaleCampaign, createBroadcast, listBroadcasts } from "@/lib/marketplace.functions";
 
 export const Route = createFileRoute("/_authenticated/admin")({ component: Admin });
 
 function Admin() {
   const { user, roles, isLoading } = useAuth();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<"overview" | "approvals" | "listings" | "stores" | "sales" | "reports" | "users" | "admins">("overview");
+  const [tab, setTab] = useState<"overview" | "approvals" | "listings" | "stores" | "sales" | "broadcasts" | "reports" | "users" | "admins">("overview");
 
   const isAdmin = roles.includes("admin");
   const isOwner = roles.includes("owner");
@@ -36,7 +36,7 @@ function Admin() {
   }
 
   const tabs = isOwner
-    ? (["overview", "approvals", "listings", "stores", "sales", "reports", "users", "admins"] as const)
+    ? (["overview", "approvals", "listings", "stores", "sales", "broadcasts", "reports", "users", "admins"] as const)
     : (["overview", "approvals", "listings", "reports"] as const);
 
   return (
@@ -70,6 +70,7 @@ function Admin() {
         {tab === "listings" && <ListingsTab qc={qc} />}
         {tab === "stores" && isOwner && <StoresTab qc={qc} />}
         {tab === "sales" && isOwner && <SalesTab qc={qc} />}
+        {tab === "broadcasts" && isOwner && <BroadcastsTab />}
         {tab === "reports" && <ReportsTab qc={qc} />}
         {tab === "users" && isOwner && <UsersTab />}
         {tab === "admins" && isOwner && <AdminsTab />}
@@ -607,6 +608,98 @@ function SalesTab({ qc }: { qc: ReturnType<typeof useQueryClient> }) {
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+function BroadcastsTab() {
+  const createFn = useServerFn(createBroadcast);
+  const listFn = useServerFn(listBroadcasts);
+  const qc = useQueryClient();
+  const [tab2, setTab2] = useState<"vendors" | "buyers">("vendors");
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+  const [sending, setSending] = useState(false);
+  const [lastResult, setLastResult] = useState<{ count: number; recipients: string[]; audience: string } | null>(null);
+
+  const { data: hist } = useQuery({
+    queryKey: ["broadcasts"],
+    queryFn: () => listFn({ data: undefined as any }),
+  });
+
+  const send = async () => {
+    if (!subject.trim() || !body.trim()) { toast.error("Subject and message required."); return; }
+    setSending(true);
+    try {
+      const res = await createFn({ data: { audience: tab2, subject, body } });
+      setLastResult({ count: res.count, recipients: res.recipients, audience: tab2 });
+      toast.success(`Prepared for ${res.count} recipient${res.count === 1 ? "" : "s"}. Click "Open in mail app" to send.`);
+      qc.invalidateQueries({ queryKey: ["broadcasts"] });
+    } catch (e: any) { toast.error(e.message); }
+    finally { setSending(false); }
+  };
+
+  const mailtoLink = lastResult
+    ? `mailto:?bcc=${encodeURIComponent(lastResult.recipients.join(","))}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+    : "#";
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-xl border border-border bg-card p-5">
+        <div className="flex items-center gap-2 mb-1"><Mail className="h-5 w-5 text-[color:var(--deal)]" /><h3 className="font-display text-lg font-bold">Send an email broadcast</h3></div>
+        <p className="text-xs text-muted-foreground mb-4">Reach every signed-up user in one click. Choose vendors, buyers, or both.</p>
+
+        <div className="inline-flex rounded-lg border border-border p-1 mb-4">
+          <button onClick={() => setTab2("vendors")} className={`px-3 py-1.5 text-sm font-semibold rounded-md transition ${tab2 === "vendors" ? "bg-foreground text-background" : "text-muted-foreground"}`}>Store owners</button>
+          <button onClick={() => setTab2("buyers")} className={`px-3 py-1.5 text-sm font-semibold rounded-md transition ${tab2 === "buyers" ? "bg-foreground text-background" : "text-muted-foreground"}`}>Customers</button>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <Label>Subject</Label>
+            <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={tab2 === "vendors" ? "New feature for sellers…" : "New products this week on Niberdealz"} />
+          </div>
+          <div>
+            <Label>Message</Label>
+            <Textarea rows={8} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Write your update, promo or news…" />
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2 items-center">
+          <Button onClick={send} disabled={sending} className="bg-foreground text-background hover:bg-foreground/90">
+            {sending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Prepare send
+          </Button>
+          {lastResult && (
+            <>
+              <Button asChild variant="outline"><a href={mailtoLink} target="_blank" rel="noopener noreferrer">Open in mail app ({lastResult.count})</a></Button>
+              <Button variant="ghost" onClick={() => navigator.clipboard.writeText(lastResult.recipients.join(", ")).then(() => toast.success("Emails copied"))}>Copy emails</Button>
+            </>
+          )}
+        </div>
+        {lastResult && (
+          <div className="mt-3 rounded-lg bg-secondary/50 p-3 text-xs">
+            <div className="font-semibold mb-1">{lastResult.count} {lastResult.audience === "vendors" ? "store owner" : "customer"}{lastResult.count === 1 ? "" : "s"} ready:</div>
+            <div className="max-h-32 overflow-y-auto text-muted-foreground break-all">{lastResult.recipients.join(", ") || "(no addresses)"}</div>
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-xl border border-border bg-card p-5">
+        <h3 className="font-display text-lg font-bold mb-3">Recent broadcasts</h3>
+        {(!hist || hist.broadcasts.length === 0) ? <p className="text-sm text-muted-foreground">No broadcasts yet.</p> : (
+          <div className="space-y-2">
+            {hist.broadcasts.map((b: any) => (
+              <div key={b.id} className="rounded-lg border border-border p-3 text-sm">
+                <div className="flex flex-wrap items-center gap-2 justify-between">
+                  <div className="font-semibold">{b.subject}</div>
+                  <div className="text-xs text-muted-foreground">{new Date(b.created_at).toLocaleString()} · {b.audience} · {b.recipient_count} recipient{b.recipient_count === 1 ? "" : "s"}</div>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground whitespace-pre-line line-clamp-3">{b.body}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

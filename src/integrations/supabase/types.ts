@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      broadcasts: {
+        Row: {
+          audience: string
+          body: string
+          created_at: string
+          created_by: string
+          id: string
+          recipient_count: number
+          recipients: Json
+          status: string
+          subject: string
+        }
+        Insert: {
+          audience: string
+          body: string
+          created_at?: string
+          created_by: string
+          id?: string
+          recipient_count?: number
+          recipients?: Json
+          status?: string
+          subject: string
+        }
+        Update: {
+          audience?: string
+          body?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          recipient_count?: number
+          recipients?: Json
+          status?: string
+          subject?: string
+        }
+        Relationships: []
+      }
       payments: {
         Row: {
           admin_notes: string | null
@@ -150,6 +186,7 @@ export type Database = {
           ai_review_notes: string | null
           ai_risk_score: number | null
           category: string
+          checkout_url: string | null
           color: string | null
           created_at: string
           description: string
@@ -170,6 +207,7 @@ export type Database = {
           ai_review_notes?: string | null
           ai_risk_score?: number | null
           category: string
+          checkout_url?: string | null
           color?: string | null
           created_at?: string
           description: string
@@ -190,6 +228,7 @@ export type Database = {
           ai_review_notes?: string | null
           ai_risk_score?: number | null
           category?: string
+          checkout_url?: string | null
           color?: string | null
           created_at?: string
           description?: string
@@ -215,6 +254,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      profiles: {
+        Row: {
+          city: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          city?: string | null
+          created_at?: string
+          full_name?: string | null
+          id: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          city?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       reports: {
         Row: {
@@ -419,10 +485,12 @@ export type Database = {
           business_description: string
           business_name: string
           category: string
+          checkout_pref: string
           city: string
           created_at: string
           email: string
           id: string
+          is_formal_business: boolean
           is_official: boolean
           logo_url: string | null
           owner_name: string
@@ -433,6 +501,7 @@ export type Database = {
           status: Database["public"]["Enums"]["vendor_status"]
           updated_at: string
           verified: boolean
+          website_url: string | null
           whatsapp_number: string
         }
         Insert: {
@@ -441,10 +510,12 @@ export type Database = {
           business_description: string
           business_name: string
           category: string
+          checkout_pref?: string
           city: string
           created_at?: string
           email: string
           id: string
+          is_formal_business?: boolean
           is_official?: boolean
           logo_url?: string | null
           owner_name: string
@@ -455,6 +526,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["vendor_status"]
           updated_at?: string
           verified?: boolean
+          website_url?: string | null
           whatsapp_number: string
         }
         Update: {
@@ -463,10 +535,12 @@ export type Database = {
           business_description?: string
           business_name?: string
           category?: string
+          checkout_pref?: string
           city?: string
           created_at?: string
           email?: string
           id?: string
+          is_formal_business?: boolean
           is_official?: boolean
           logo_url?: string | null
           owner_name?: string
@@ -477,6 +551,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["vendor_status"]
           updated_at?: string
           verified?: boolean
+          website_url?: string | null
           whatsapp_number?: string
         }
         Relationships: []
