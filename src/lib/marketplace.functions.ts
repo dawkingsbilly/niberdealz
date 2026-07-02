@@ -109,6 +109,7 @@ export const submitProduct = createServerFn({ method: "POST" })
       size: data.size || null,
       color: data.color || null,
       stock: data.stock ?? null,
+      checkout_url: data.checkout_url || null,
       status: "approved",
       is_sold: false,
     } as any).select("id").single();
