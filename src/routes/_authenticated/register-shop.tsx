@@ -119,6 +119,33 @@ function RegisterShop() {
               <Label>Short bio (min 10 chars)</Label>
               <Textarea rows={4} value={form.business_description} onChange={(e) => update("business_description", e.target.value)} placeholder="A line or two about your store." />
             </div>
+
+            <div className="rounded-lg border border-border bg-secondary/40 p-4 space-y-3">
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input type="checkbox" className="mt-1" checked={form.is_formal_business} onChange={(e) => update("is_formal_business", e.target.checked)} />
+                <div>
+                  <div className="text-sm font-semibold">This is a formal / registered business</div>
+                  <div className="text-xs text-muted-foreground">Adds a website field and lets you send buyers to check out on your site instead of WhatsApp.</div>
+                </div>
+              </label>
+
+              {form.is_formal_business && (
+                <>
+                  <div className="space-y-1.5">
+                    <Label>Business website (optional)</Label>
+                    <Input type="url" value={form.website_url} onChange={(e) => update("website_url", e.target.value)} placeholder="https://yourbusiness.co.za" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>How buyers check out</Label>
+                    <select className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm" value={form.checkout_pref} onChange={(e) => update("checkout_pref", e.target.value)}>
+                      <option value="whatsapp">WhatsApp only</option>
+                      <option value="website">My website only</option>
+                      <option value="both">Both — buyer picks</option>
+                    </select>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
 
           <Button onClick={onSubmit} disabled={!canSubmit || loading} className="w-full mt-6 bg-[var(--deal)] hover:bg-[var(--deal)]/90 text-[color:var(--deal-foreground)]">
