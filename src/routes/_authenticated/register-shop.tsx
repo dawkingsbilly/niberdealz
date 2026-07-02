@@ -29,6 +29,9 @@ function RegisterShop() {
     city: "",
     category: "",
     business_description: "",
+    is_formal_business: false,
+    website_url: "",
+    checkout_pref: "whatsapp" as "whatsapp" | "website" | "both",
   });
   const [loading, setLoading] = useState(false);
   const [hasShop, setHasShop] = useState(false);
