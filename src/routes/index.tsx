@@ -51,6 +51,15 @@ function Home() {
         .limit(96);
       if (q.trim()) query = query.ilike("title", `%${q.trim()}%`);
       if (category) query = query.eq("category", category);
+
+      // Load current user's profile city for location-based sort (best-effort)
+      const { data: userData } = await supabase.auth.getUser();
+      let myCity = "";
+      if (userData.user) {
+        const { data: prof } = await supabase.from("profiles").select("city").eq("id", userData.user.id).maybeSingle();
+        myCity = ((prof as any)?.city ?? "").toLowerCase().trim();
+      }
+
       const [{ data: products, error }, activeSales, reviews] = await Promise.all([
         query,
         (supabase.from("sale_campaigns" as any) as any)
@@ -66,7 +75,7 @@ function Home() {
         (activeSales.data ?? []).map((c: any) => [c.id, c.discount_pct as number])
       );
 
-      let joinedByVendor = new Map<string, number>(); // vendor_id -> best discount pct
+      let joinedByVendor = new Map<string, number>();
       if (activeCampaignIds.length > 0) {
         const { data: parts } = await (supabase.from("sale_participants" as any) as any)
           .select("vendor_id, campaign_id, status")
@@ -79,7 +88,6 @@ function Home() {
         });
       }
 
-      // aggregate reviews
       const agg = new Map<string, { sum: number; n: number }>();
       (reviews.data ?? []).forEach((r: any) => {
         const cur = agg.get(r.product_id) ?? { sum: 0, n: 0 };
@@ -90,22 +98,28 @@ function Home() {
       const enriched = (products ?? []).map((p: any) => {
         const discount = joinedByVendor.get(p.vendor_id) ?? 0;
         const a = agg.get(p.id);
+        const vCity = (p.vendors?.city ?? "").toLowerCase().trim();
+        const nearby = !!myCity && !!vCity && (vCity === myCity || vCity.includes(myCity) || myCity.includes(vCity));
         return {
           ...p,
           discount_pct: discount || null,
           avg_rating: a ? a.sum / a.n : null,
           review_count: a?.n ?? 0,
+          _nearby: nearby,
         };
-      }) as (ProductCardData & { vendor_id: string })[];
+      }) as (ProductCardData & { vendor_id: string; _nearby?: boolean })[];
 
-      return enriched;
+      return { list: enriched, myCity };
     },
   });
 
   const products = useMemo(() => {
-    const list = data ?? [];
-    // Ordering: on-sale first, then NIBER-DEALZ STORE (is_official), then everyone else (newest first — DB order preserved)
+    const list = data?.list ?? [];
+    // Ordering: nearby first, then on-sale, then NIBER-DEALZ STORE, then everyone else
     return [...list].sort((a: any, b: any) => {
+      const aN = a._nearby ? 1 : 0;
+      const bN = b._nearby ? 1 : 0;
+      if (aN !== bN) return bN - aN;
       const aSale = a.discount_pct ? 1 : 0;
       const bSale = b.discount_pct ? 1 : 0;
       if (aSale !== bSale) return bSale - aSale;
@@ -115,6 +129,8 @@ function Home() {
       return 0;
     });
   }, [data]);
+
+  const myCity = data?.myCity ?? "";
 
   return (
     <div className="min-h-screen flex flex-col">
