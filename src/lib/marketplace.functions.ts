@@ -10,6 +10,9 @@ const VendorInput = z.object({
   business_description: z.string().trim().min(10).max(2000),
   category: z.string().trim().min(2).max(60),
   logo_url: z.string().trim().max(1000).optional().nullable(),
+  is_formal_business: z.boolean().optional().default(false),
+  website_url: z.string().trim().url().max(500).optional().nullable().or(z.literal("")),
+  checkout_pref: z.enum(["whatsapp", "website", "both"]).optional().default("whatsapp"),
 });
 
 export const submitVendorRegistration = createServerFn({ method: "POST" })
