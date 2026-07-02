@@ -217,7 +217,7 @@ function Home() {
         <div className="mb-6 flex items-end justify-between gap-4">
           <div>
             <h2 className="font-display text-2xl md:text-3xl font-bold flex items-center gap-2"><Tag className="h-6 w-6 text-[color:var(--deal)]" />Fresh listings</h2>
-            <p className="text-muted-foreground text-sm">Sales first, then NIBER-DEALZ STORE, then latest.</p>
+            <p className="text-muted-foreground text-sm">{myCity ? <>Near <strong className="text-foreground">{myCity}</strong> first, then sales, then rest.</> : "Sign in and add your city to see listings near you first."}</p>
           </div>
           <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex"><Link to="/auth" search={{ mode: "register" }}>Become a seller <ArrowRight className="ml-1 h-4 w-4" /></Link></Button>
         </div>
