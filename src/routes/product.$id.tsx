@@ -146,13 +146,44 @@ function ProductDetail() {
               </div>
             )}
 
-            <div className="mt-6">
-              <Button asChild size="lg" disabled={product.is_sold} className="w-full h-14 bg-[#25D366] hover:bg-[#25D366]/90 text-white shadow-lg gap-2 text-base font-semibold">
-                <a href={product.is_sold ? "#" : waLink} target="_blank" rel="noopener noreferrer" onClick={product.is_sold ? undefined : onWhatsAppClick}>
-                  <MessageCircle className="h-5 w-5" /> {product.is_sold ? "Sold" : "Buy on WhatsApp"}
-                </a>
-              </Button>
-              <p className="text-xs text-muted-foreground text-center mt-2">You'll chat directly with the seller. Niberdealz doesn't handle payment.</p>
+            <div className="mt-6 space-y-2">
+              {(() => {
+                const websiteUrl = product.checkout_url || vendor?.website_url;
+                const pref = vendor?.checkout_pref || "whatsapp";
+                const showWebsite = !!websiteUrl && (pref === "website" || pref === "both");
+                const showWhatsApp = pref !== "website" || !websiteUrl;
+                return (
+                  <>
+                    {showWebsite && (
+                      <Button asChild size="lg" disabled={product.is_sold} className="w-full h-14 bg-foreground text-background hover:bg-foreground/90 gap-2 text-base font-semibold">
+                        <a href={product.is_sold ? "#" : websiteUrl} target="_blank" rel="noopener noreferrer">
+                          <Store className="h-5 w-5" /> {product.is_sold ? "Sold" : "Buy on business website"}
+                        </a>
+                      </Button>
+                    )}
+                    {showWhatsApp && (
+                      user ? (
+                        <Button asChild size="lg" disabled={product.is_sold} className="w-full h-14 bg-[#25D366] hover:bg-[#25D366]/90 text-white shadow-lg gap-2 text-base font-semibold">
+                          <a href={product.is_sold ? "#" : waLink} target="_blank" rel="noopener noreferrer" onClick={product.is_sold ? undefined : onWhatsAppClick}>
+                            <MessageCircle className="h-5 w-5" /> {product.is_sold ? "Sold" : "Chat seller on WhatsApp"}
+                          </a>
+                        </Button>
+                      ) : (
+                        <Button asChild size="lg" className="w-full h-14 bg-[#25D366] hover:bg-[#25D366]/90 text-white shadow-lg gap-2 text-base font-semibold">
+                          <Link to="/auth" search={{ mode: "register", next: `/product/${product.id}` }}>
+                            <MessageCircle className="h-5 w-5" /> Sign up free to chat seller
+                          </Link>
+                        </Button>
+                      )
+                    )}
+                  </>
+                );
+              })()}
+              <p className="text-xs text-muted-foreground text-center">You'll chat directly with the seller. Niberdealz doesn't handle payment.</p>
+            </div>
+
+            <div className="mt-4 rounded-lg border border-amber-300/40 bg-amber-50 dark:bg-amber-500/5 p-3 text-xs text-foreground/80">
+              <strong>Off-campus / can't inspect in person?</strong> Ask the seller for a short video of the item, check their store reviews below, and only send money once you're sure they're reliable. Meet in a public place if possible.
             </div>
 
             <div className="mt-8">
