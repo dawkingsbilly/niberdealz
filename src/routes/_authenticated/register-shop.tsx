@@ -57,7 +57,7 @@ function RegisterShop() {
     );
   }
 
-  const update = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
+  const update = (k: keyof typeof form, v: any) => setForm((f) => ({ ...f, [k]: v }));
   const canSubmit =
     form.business_name.length >= 2 &&
     form.owner_name.length >= 2 &&
