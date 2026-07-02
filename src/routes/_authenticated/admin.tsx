@@ -624,7 +624,7 @@ function BroadcastsTab() {
 
   const { data: hist } = useQuery({
     queryKey: ["broadcasts"],
-    queryFn: () => listFn({ data: {} as any }),
+    queryFn: () => listFn({ data: undefined as any }),
   });
 
   const send = async () => {
