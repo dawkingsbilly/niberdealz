@@ -83,6 +83,7 @@ const ProductInput = z.object({
   size: z.string().trim().max(40).optional().nullable(),
   color: z.string().trim().max(40).optional().nullable(),
   stock: z.number().int().min(0).max(100000).optional().nullable(),
+  checkout_url: z.string().trim().url().max(500).optional().nullable().or(z.literal("")),
 });
 
 export const submitProduct = createServerFn({ method: "POST" })
