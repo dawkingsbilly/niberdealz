@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SiteHeader, SiteFooter } from "@/components/site-header";
 import { ShieldAlert, MapPin, MessageCircle, EyeOff, Users, Camera, Phone, Sun, BadgeCheck, Ban, Lock } from "lucide-react";
-import { CONTACT_EMAIL, CONTACT_PHONE } from "@/lib/constants";
+import { CONTACT_EMAIL } from "@/lib/constants";
 
 export const Route = createFileRoute("/safety")({
   head: () => ({
@@ -23,7 +23,7 @@ const TIPS = [
   { Icon: BadgeCheck, title: "Trust verified stores", body: "Look at how long the store has been active, how many other listings it has, and whether the WhatsApp number matches the store name." },
   
   { Icon: Lock, title: "Protect your personal info", body: "Don't share your ID number, banking PIN, OTPs, or NSFAS details. No legitimate seller or buyer needs them." },
-  { Icon: ShieldAlert, title: "Report sketchy listings", body: `Anything that feels off — fake products, harassment, hate speech, weapons, drugs — email ${CONTACT_EMAIL} or WhatsApp ${CONTACT_PHONE}. Our team removes flagged listings fast.` },
+  { Icon: ShieldAlert, title: "Report sketchy listings", body: `Anything that feels off — fake products, harassment, hate speech, weapons, drugs — email ${CONTACT_EMAIL} or reach us through our Contact page. Our team removes flagged listings fast.` },
 ];
 
 
@@ -84,8 +84,8 @@ function Safety() {
             <a href={`mailto:${CONTACT_EMAIL}`} className="inline-flex items-center gap-2 rounded-md bg-foreground text-background px-4 py-2 font-medium">
               <MessageCircle className="h-4 w-4" /> Email {CONTACT_EMAIL}
             </a>
-            <a href={`https://wa.me/${CONTACT_PHONE.replace(/\D/g, "")}`} className="inline-flex items-center gap-2 rounded-md border border-border px-4 py-2 font-medium">
-              <Phone className="h-4 w-4" /> WhatsApp {CONTACT_PHONE}
+            <a href="/contact" className="inline-flex items-center gap-2 rounded-md border border-border px-4 py-2 font-medium">
+              <Phone className="h-4 w-4" /> More ways to reach us
             </a>
           </div>
           <p className="mt-4 text-xs text-muted-foreground">If you are in immediate danger, call campus security or the South African Police Service on 10111 before contacting us.</p>

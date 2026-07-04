@@ -7,7 +7,7 @@ import { SiteHeader, SiteFooter } from "@/components/site-header";
 import { ProductCard, type ProductCardData } from "@/components/product-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CATEGORIES, SITE_NAME, CONTACT_PHONE, CONTACT_EMAIL } from "@/lib/constants";
+import { CATEGORIES, SITE_NAME, CONTACT_EMAIL } from "@/lib/constants";
 
 import img1 from "@/assets/slides/clothing.jpg.asset.json";
 import img2 from "@/assets/slides/electronics.jpg.asset.json";
@@ -270,7 +270,7 @@ function Home() {
             <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-[color:var(--accent)] mb-2"><Store className="h-3.5 w-3.5" />For sellers</div>
             <h2 className="font-display text-2xl md:text-4xl font-bold">Open your free store today.</h2>
             <p className="text-background/70 mt-2 max-w-xl">No listing fees, no commission, no waiting. List your items in minutes and meet buyers on campus.</p>
-            <div className="mt-3 text-xs text-background/60">Need help? Call {CONTACT_PHONE} · {CONTACT_EMAIL}</div>
+            <div className="mt-3 text-xs text-background/60">Questions? Email {CONTACT_EMAIL} or visit our Contact page.</div>
           </div>
           <Button asChild size="lg" className="bg-[var(--deal)] hover:bg-[var(--deal)]/90 text-[color:var(--deal-foreground)] shadow-[var(--shadow-deal)]">
             <Link to="/auth" search={{ mode: "register" }}>Start selling free <ArrowRight className="ml-1 h-4 w-4" /></Link>
