@@ -1,12 +1,12 @@
 import { Link, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
-import { LogOut, LayoutDashboard, ShieldCheck, Crown, ShieldAlert, Lock, Menu, MessageCircle, Mail, Phone, Home, LogIn, Store } from "lucide-react";
+import { LogOut, LayoutDashboard, ShieldCheck, Crown, ShieldAlert, Lock, Menu, MessageCircle, Mail, Home, LogIn, Store } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { SITE_NAME, CONTACT_PHONE, CONTACT_EMAIL } from "@/lib/constants";
+import { SITE_NAME, CONTACT_EMAIL } from "@/lib/constants";
 import logoAsset from "@/assets/niber-logo.ico.asset.json";
 
 const WHATSAPP_CHANNEL = "https://wa.me/channel/0029VaOb9f1KbYMSEsUT6T46";
@@ -131,9 +131,6 @@ export function SiteHeader() {
                 <a href={WHATSAPP_CHANNEL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-foreground/80 hover:bg-accent hover:text-foreground transition">
                   <MessageCircle className="h-4 w-4 text-success" />Join our WhatsApp channel
                 </a>
-                <a href={`tel:${CONTACT_PHONE}`} className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-foreground/80 hover:bg-accent hover:text-foreground transition">
-                  <Phone className="h-4 w-4" />{CONTACT_PHONE}
-                </a>
                 <a href={`mailto:${CONTACT_EMAIL}`} className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-foreground/80 hover:bg-accent hover:text-foreground transition">
                   <Mail className="h-4 w-4" />{CONTACT_EMAIL}
                 </a>
@@ -154,49 +151,55 @@ export function SiteHeader() {
 export function SiteFooter() {
   return (
     <footer className="border-t border-border bg-secondary/40 mt-16">
-      <div className="container mx-auto px-4 py-10 grid gap-8 md:grid-cols-4 text-sm">
-        <div>
-          <div className="flex items-center gap-2 mb-3">
+      <div className="container mx-auto px-4 py-12 grid gap-10 md:grid-cols-4 text-sm">
+        <div className="md:col-span-1">
+          <div className="flex items-center gap-2.5 mb-3">
             <img src={logoAsset.url} alt={`${BRAND} logo`} className="h-9 w-9 object-contain" />
-            <span className="font-display font-extrabold tracking-tight">{BRAND}</span>
+            <span className="font-display font-extrabold tracking-tight text-base">{BRAND}</span>
           </div>
-          <p className="text-muted-foreground">Free student marketplace. Buyers and sellers connect on WhatsApp.</p>
-          <div className="mt-3 text-xs text-muted-foreground space-y-1">
-            <div>📞 {CONTACT_PHONE}</div>
-            <div>✉️ {CONTACT_EMAIL}</div>
-            <a href={WHATSAPP_CHANNEL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-2 text-success hover:underline">
-              <MessageCircle className="h-3.5 w-3.5" /> Join WhatsApp channel
-            </a>
-          </div>
+          <p className="text-muted-foreground leading-relaxed">
+            A trusted community marketplace. Verified sellers, safe meet-ups, direct conversations on WhatsApp.
+          </p>
+          <a
+            href={WHATSAPP_CHANNEL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 mt-4 text-xs font-medium text-success hover:underline"
+          >
+            <MessageCircle className="h-3.5 w-3.5" /> Follow our WhatsApp channel
+          </a>
         </div>
         <div>
-          <h4 className="font-semibold mb-3">Marketplace</h4>
+          <h4 className="font-semibold mb-3 text-foreground">Marketplace</h4>
           <ul className="space-y-2 text-muted-foreground">
-            <li><Link to="/" className="hover:text-foreground">Browse listings</Link></li>
-            <li><Link to="/auth" search={{ mode: "register" }} className="hover:text-foreground">Open a free store</Link></li>
-            <li><Link to="/auth" search={{ mode: "login" }} className="hover:text-foreground">Vendor sign in</Link></li>
+            <li><Link to="/" className="hover:text-foreground transition">Browse listings</Link></li>
+            <li><Link to="/auth" search={{ mode: "register" }} className="hover:text-foreground transition">Open a free store</Link></li>
+            <li><Link to="/auth" search={{ mode: "login" }} className="hover:text-foreground transition">Vendor sign in</Link></li>
           </ul>
         </div>
         <div>
-          <h4 className="font-semibold mb-3">Help</h4>
+          <h4 className="font-semibold mb-3 text-foreground">Support</h4>
           <ul className="space-y-2 text-muted-foreground">
-            <li><Link to="/safety" className="hover:text-foreground"><span className="inline-flex items-center gap-1"><ShieldAlert className="h-3.5 w-3.5" />Safety guidelines</span></Link></li>
-            <li><Link to="/contact" className="hover:text-foreground">Contact us</Link></li>
+            <li><Link to="/safety" className="hover:text-foreground transition"><span className="inline-flex items-center gap-1"><ShieldAlert className="h-3.5 w-3.5" />Safety guidelines</span></Link></li>
+            <li><Link to="/contact" className="hover:text-foreground transition">Contact us</Link></li>
           </ul>
         </div>
         <div>
-          <h4 className="font-semibold mb-3">Legal</h4>
+          <h4 className="font-semibold mb-3 text-foreground">Legal</h4>
           <ul className="space-y-2 text-muted-foreground">
-            <li><Link to="/privacy" className="hover:text-foreground">Privacy Policy</Link></li>
-            <li><Link to="/terms" className="hover:text-foreground">Terms of Service</Link></li>
+            <li><Link to="/privacy" className="hover:text-foreground transition">Privacy Policy</Link></li>
+            <li><Link to="/terms" className="hover:text-foreground transition">Terms of Service</Link></li>
           </ul>
         </div>
       </div>
-      <div className="border-t border-border py-4 text-center text-xs text-muted-foreground flex flex-col sm:flex-row items-center justify-center gap-3">
+      <div className="border-t border-border py-5 px-4 text-xs text-muted-foreground flex flex-col sm:flex-row items-center justify-between gap-3 container mx-auto">
         <span>© {new Date().getFullYear()} {BRAND}. All rights reserved.</span>
-        <Link to="/auth" search={{ mode: "login", role: "ceo" }} className="inline-flex items-center gap-1 text-muted-foreground/60 hover:text-foreground transition">
-          <Lock className="h-3 w-3" /> Staff / CEO sign in
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link to="/contact" className="hover:text-foreground transition">Get in touch</Link>
+          <Link to="/auth" search={{ mode: "login", role: "ceo" }} className="inline-flex items-center gap-1 text-muted-foreground/60 hover:text-foreground transition">
+            <Lock className="h-3 w-3" /> Staff sign in
+          </Link>
+        </div>
       </div>
     </footer>
   );
