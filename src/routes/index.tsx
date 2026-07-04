@@ -9,13 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CATEGORIES, SITE_NAME, CONTACT_PHONE, CONTACT_EMAIL } from "@/lib/constants";
 
-import img1 from "@/assets/IMG-20260604-WA0140.jpg.asset.json";
-import img2 from "@/assets/IMG-20260606-WA0028.jpg.asset.json";
-import img3 from "@/assets/IMG-20260606-WA0041.jpg.asset.json";
-import img4 from "@/assets/IMG-20260606-WA0047.jpg.asset.json";
-import img5 from "@/assets/IMG-20260606-WA0082.jpg.asset.json";
-import img6 from "@/assets/IMG-20260608-WA0019.jpg.asset.json";
-import img7 from "@/assets/IMG-20260608-WA0020.jpg.asset.json";
+import img1 from "@/assets/slides/clothing.jpg.asset.json";
+import img2 from "@/assets/slides/electronics.jpg.asset.json";
+import img3 from "@/assets/slides/sneakers.jpg.asset.json";
+import img4 from "@/assets/slides/accessories.jpg.asset.json";
+import img5 from "@/assets/slides/furniture.jpg.asset.json";
+import img6 from "@/assets/slides/textbooks.jpg.asset.json";
+import img7 from "@/assets/slides/handoff.jpg.asset.json";
 
 const SLIDES = [img1, img2, img3, img4, img5, img6, img7];
 
