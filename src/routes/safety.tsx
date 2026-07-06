@@ -45,8 +45,8 @@ function Safety() {
           {TIPS.map(({ Icon, title, body }) => (
             <div key={title} className="rounded-2xl bg-card border border-border p-5 shadow-[var(--shadow-card)]">
               <Icon className="h-6 w-6 text-[color:var(--deal)] mb-2" />
-              <h3 className="font-semibold">{title}</h3>
-              <p className="text-sm text-muted-foreground mt-1">{body}</p>
+              <h2 className="font-semibold text-base">{title}</h2>
+              <p className="text-sm text-foreground/70 mt-1">{body}</p>
             </div>
           ))}
         </div>

@@ -13,6 +13,72 @@ import { buildWhatsAppMessage } from "@/lib/constants";
 import { adminDeleteProduct, submitReport, submitReview } from "@/lib/marketplace.functions";
 
 export const Route = createFileRoute("/product/$id")({
+  loader: async ({ params }) => {
+    const { data } = await supabase
+      .from("products")
+      .select("id, title, description, price_zar, image_url, category, vendors(business_name, city)")
+      .eq("id", params.id)
+      .eq("status", "approved")
+      .maybeSingle();
+    return { seed: data as any };
+  },
+  head: ({ params, loaderData }) => {
+    const p: any = loaderData?.seed;
+    const url = `https://niberdealz.lovable.app/product/${params.id}`;
+    if (!p) {
+      return {
+        meta: [
+          { title: "Listing — Niberdealz" },
+          { name: "description", content: "Browse verified student listings on Niberdealz." },
+          { property: "og:url", content: url },
+        ],
+        links: [{ rel: "canonical", href: url }],
+      };
+    }
+    const shortDesc = String(p.description ?? "").slice(0, 155).replace(/\s+/g, " ").trim();
+    const priceStr = `R${Number(p.price_zar).toLocaleString("en-ZA")}`;
+    const vendorName = p.vendors?.business_name ?? "Niberdealz";
+    const city = p.vendors?.city ? ` · ${p.vendors.city}` : "";
+    const title = `${p.title} — ${priceStr} · ${vendorName}${city}`.slice(0, 90);
+    const desc = shortDesc || `${p.title} for sale on Niberdealz.`;
+    const meta: Array<Record<string, string>> = [
+      { title },
+      { name: "description", content: desc },
+      { property: "og:title", content: title },
+      { property: "og:description", content: desc },
+      { property: "og:type", content: "product" },
+      { property: "og:url", content: url },
+      { property: "product:price:amount", content: String(p.price_zar) },
+      { property: "product:price:currency", content: "ZAR" },
+    ];
+    if (p.image_url) {
+      meta.push({ property: "og:image", content: p.image_url });
+      meta.push({ name: "twitter:image", content: p.image_url });
+    }
+    return {
+      meta,
+      links: [{ rel: "canonical", href: url }],
+      scripts: [{
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Product",
+          name: p.title,
+          description: shortDesc,
+          image: p.image_url ? [p.image_url] : undefined,
+          category: p.category,
+          brand: vendorName,
+          offers: {
+            "@type": "Offer",
+            price: Number(p.price_zar),
+            priceCurrency: "ZAR",
+            availability: "https://schema.org/InStock",
+            url,
+          },
+        }),
+      }],
+    };
+  },
   component: ProductDetail,
   errorComponent: ({ error }) => (
     <div className="min-h-screen flex flex-col"><SiteHeader />
@@ -187,7 +253,7 @@ function ProductDetail() {
             </div>
 
             <div className="mt-8">
-              <h3 className="font-semibold mb-2">Description</h3>
+              <h2 className="font-semibold mb-2 text-base">Description</h2>
               <p className="text-foreground/80 whitespace-pre-line leading-relaxed">{product.description}</p>
             </div>
 
