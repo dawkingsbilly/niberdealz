@@ -187,7 +187,7 @@ function ProductDetail() {
             </div>
 
             <div className="mt-8">
-              <h3 className="font-semibold mb-2">Description</h3>
+              <h2 className="font-semibold mb-2 text-base">Description</h2>
               <p className="text-foreground/80 whitespace-pre-line leading-relaxed">{product.description}</p>
             </div>
 

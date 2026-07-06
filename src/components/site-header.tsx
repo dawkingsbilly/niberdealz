@@ -80,7 +80,7 @@ export function SiteHeader() {
                 </Button>
               )}
               <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex">
-                <Link to="/dashboard"><LayoutDashboard className="h-4 w-4 sm:mr-1.5" /><span className="hidden sm:inline">Dashboard</span></Link>
+                <Link to="/dashboard" aria-label="Dashboard"><LayoutDashboard className="h-4 w-4 sm:mr-1.5" /><span className="hidden sm:inline">Dashboard</span></Link>
               </Button>
             </>
           ) : (

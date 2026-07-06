@@ -22,8 +22,38 @@ const SLIDES = [img1, img2, img3, img4, img5, img6, img7];
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Niberdealz — Student marketplace, buy and sell on WhatsApp" },
-      { name: "description", content: "The free student marketplace. Find sneakers, textbooks, electronics and more from students near you. Connect on WhatsApp." },
+      { title: "Niberdealz — Student Marketplace on WhatsApp" },
+      { name: "description", content: "Free student marketplace. Buy and sell sneakers, textbooks, electronics and more with verified students near you — direct on WhatsApp." },
+      { property: "og:title", content: "Niberdealz — Student Marketplace on WhatsApp" },
+      { property: "og:description", content: "Free student marketplace. Buy and sell sneakers, textbooks, electronics and more with verified students near you — direct on WhatsApp." },
+      { property: "og:url", content: "https://niberdealz.lovable.app/" },
+    ],
+    links: [{ rel: "canonical", href: "https://niberdealz.lovable.app/" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "Niberdealz",
+          url: "https://niberdealz.lovable.app/",
+          potentialAction: {
+            "@type": "SearchAction",
+            target: "https://niberdealz.lovable.app/?q={search_term_string}",
+            "query-input": "required name=search_term_string",
+          },
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          name: "Niberdealz",
+          url: "https://niberdealz.lovable.app/",
+          logo: "https://niberdealz.lovable.app/favicon.ico",
+        }),
+      },
     ],
   }),
   component: Home,

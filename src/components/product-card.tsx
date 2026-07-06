@@ -33,7 +33,7 @@ export function ProductCard({ p }: { p: ProductCardData }) {
     >
       <div className="aspect-square bg-muted overflow-hidden relative">
         {p.image_url ? (
-          <img src={p.image_url} alt={p.title} loading="lazy" className="h-full w-full object-cover transition group-hover:scale-105" />
+          <img src={p.image_url} alt={`Product: ${p.title}`} loading="lazy" className="h-full w-full object-cover transition group-hover:scale-105" />
         ) : (
           <div className="h-full w-full flex items-center justify-center text-muted-foreground text-xs uppercase tracking-wider">No image</div>
         )}
