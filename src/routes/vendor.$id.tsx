@@ -13,6 +13,60 @@ import { Textarea } from "@/components/ui/textarea";
 import { submitStoreReview } from "@/lib/marketplace.functions";
 
 export const Route = createFileRoute("/vendor/$id")({
+  loader: async ({ params }) => {
+    const { data } = await supabase
+      .from("vendors")
+      .select("id, business_name, city, category, business_description, logo_url")
+      .eq("id", params.id)
+      .eq("status", "approved")
+      .maybeSingle();
+    return { seed: data as any };
+  },
+  head: ({ params, loaderData }) => {
+    const v: any = loaderData?.seed;
+    const url = `https://niberdealz.lovable.app/vendor/${params.id}`;
+    if (!v) {
+      return {
+        meta: [
+          { title: "Store — Niberdealz" },
+          { name: "description", content: "Browse verified stores on Niberdealz." },
+          { property: "og:url", content: url },
+        ],
+        links: [{ rel: "canonical", href: url }],
+      };
+    }
+    const shortDesc = String(v.business_description ?? "").slice(0, 155).replace(/\s+/g, " ").trim();
+    const title = `${v.business_name} — ${v.city} · Niberdealz`.slice(0, 90);
+    const desc = shortDesc || `${v.business_name} on Niberdealz. Shop verified student listings.`;
+    const meta: Array<Record<string, string>> = [
+      { title },
+      { name: "description", content: desc },
+      { property: "og:title", content: title },
+      { property: "og:description", content: desc },
+      { property: "og:type", content: "profile" },
+      { property: "og:url", content: url },
+    ];
+    if (v.logo_url) {
+      meta.push({ property: "og:image", content: v.logo_url });
+      meta.push({ name: "twitter:image", content: v.logo_url });
+    }
+    return {
+      meta,
+      links: [{ rel: "canonical", href: url }],
+      scripts: [{
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Store",
+          name: v.business_name,
+          description: shortDesc,
+          image: v.logo_url || undefined,
+          url,
+          address: v.city ? { "@type": "PostalAddress", addressLocality: v.city, addressCountry: "ZA" } : undefined,
+        }),
+      }],
+    };
+  },
   component: VendorPage,
   notFoundComponent: () => (
     <div className="min-h-screen"><SiteHeader /><div className="container mx-auto px-4 py-16 text-center"><h2 className="font-display text-2xl font-bold">Store not found</h2></div></div>
