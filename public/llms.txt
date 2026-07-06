@@ -1,0 +1,15 @@
+# Niberdealz
+
+> Niberdealz is a South African student-friendly marketplace where verified vendors list items and buyers connect with them directly on WhatsApp. Free to list, free to browse, 0% commission.
+
+Niberdealz focuses on safe, on-campus meet-ups and direct seller-buyer chat. Sellers open a free store and post items across categories like clothing, sneakers, electronics, textbooks, furniture and accessories. Buyers browse listings, sign up to chat, and complete the deal in person or via the seller's website.
+
+## Pages
+
+- [Home](/): Browse fresh listings, filter by category, and search across verified student stores.
+- [Safety guidelines](/safety): 10 safety rules for buyers and sellers, prohibited items, and how to report scams.
+- [Contact](/contact): Ways to reach the Niberdealz team.
+- [Privacy Policy](/privacy): How Niberdealz handles user data.
+- [Terms of Service](/terms): Rules for using the marketplace.
+- [Open a free store](/auth?mode=register): Vendor sign-up to list items with a WhatsApp checkout.
+- [Sign in](/auth?mode=login): Existing account sign-in.
