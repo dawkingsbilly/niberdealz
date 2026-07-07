@@ -28,7 +28,10 @@ export const Route = createFileRoute("/")({
       { property: "og:description", content: "Free student marketplace. Buy and sell sneakers, textbooks, electronics and more with verified students near you — direct on WhatsApp." },
       { property: "og:url", content: "https://niberdealz.lovable.app/" },
     ],
-    links: [{ rel: "canonical", href: "https://niberdealz.lovable.app/" }],
+    links: [
+      { rel: "canonical", href: "https://niberdealz.lovable.app/" },
+      { rel: "preload", as: "image", href: img1.url, fetchpriority: "high" },
+    ],
     scripts: [
       {
         type: "application/ld+json",
@@ -169,11 +172,25 @@ function Home() {
       <section className="relative overflow-hidden">
         <div className="absolute inset-0">
           {SLIDES.map((img, i) => (
-            <div
-              key={i}
-              className="absolute inset-0 transition-opacity duration-1000"
-              style={{ opacity: i === slide ? 1 : 0, backgroundImage: `url(${img.url})`, backgroundSize: "cover", backgroundPosition: "center" }}
-            />
+            i === 0 ? (
+              <img
+                key={i}
+                src={img.url}
+                alt=""
+                width={1600}
+                height={900}
+                fetchPriority="high"
+                decoding="async"
+                className="absolute inset-0 h-full w-full object-cover transition-opacity duration-1000"
+                style={{ opacity: i === slide ? 1 : 0 }}
+              />
+            ) : (
+              <div
+                key={i}
+                className="absolute inset-0 transition-opacity duration-1000"
+                style={{ opacity: i === slide ? 1 : 0, backgroundImage: `url(${img.url})`, backgroundSize: "cover", backgroundPosition: "center" }}
+              />
+            )
           ))}
           <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70" />
         </div>
