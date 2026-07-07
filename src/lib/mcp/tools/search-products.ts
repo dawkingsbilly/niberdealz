@@ -26,7 +26,15 @@ export default defineTool({
       .eq("status", "approved")
       .eq("is_sold", false)
       .limit(limit ?? 10);
-    if (query) q = q.or(`title.ilike.%${query}%,description.ilike.%${query}%`);
+    if (query) {
+      // Escape PostgREST-reserved characters to prevent .or() filter injection.
+      // Reserved in filter values: , . ( ) : and % (ilike wildcard).
+      const safe = query.replace(/[,.():%*\\]/g, " ").trim();
+      if (safe) {
+        const pattern = `%${safe}%`;
+        q = q.or(`title.ilike.${pattern},description.ilike.${pattern}`);
+      }
+    }
     if (category) q = q.eq("category", category);
     if (city) q = q.eq("vendors.city", city);
     const { data, error } = await q;

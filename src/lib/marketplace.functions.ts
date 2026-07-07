@@ -98,6 +98,12 @@ export const submitProduct = createServerFn({ method: "POST" })
     const images = data.images ?? (data.image_url ? [data.image_url] : []);
     const cover = data.image_url ?? images[0] ?? null;
 
+    // New listings are always pending review. Additionally, only vendors
+    // whose store has been approved may submit products at all.
+    if (vendor.status !== "approved") {
+      throw new Error("Your store is still under review. You can submit products once it's approved.");
+    }
+
     const { data: row, error } = await supabase.from("products").insert({
       vendor_id: userId,
       title: data.title,
@@ -110,7 +116,7 @@ export const submitProduct = createServerFn({ method: "POST" })
       color: data.color || null,
       stock: data.stock ?? null,
       checkout_url: data.checkout_url || null,
-      status: "approved",
+      status: "pending",
       is_sold: false,
     } as any).select("id").single();
     if (error) throw new Error(error.message);
