@@ -299,7 +299,7 @@ function Stars({ value, size = 14 }: { value: number; size?: number }) {
   return (
     <div className="inline-flex">
       {[1,2,3,4,5].map((n) => (
-        <Star key={n} style={{ width: size, height: size }} className={n <= Math.round(value) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/40"} />
+        <Star key={n} style={{ width: size, height: size }} className={n <= Math.round(value) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/70"} />
       ))}
     </div>
   );
@@ -328,7 +328,7 @@ function Reviews({ productId, reviews, canPost, userId, onPosted }: any) {
           <p className="text-sm font-medium mb-2">{mine ? "Update your review" : "Leave a review"}</p>
           <div className="flex gap-1 mb-2">
             {[1,2,3,4,5].map((n) => (
-              <button key={n} onClick={() => setRating(n)}><Star className={`h-7 w-7 ${n <= rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/40"}`} /></button>
+              <button key={n} onClick={() => setRating(n)}><Star className={`h-7 w-7 ${n <= rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/70"}`} /></button>
             ))}
           </div>
           <Textarea rows={3} value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Share your experience…" />
