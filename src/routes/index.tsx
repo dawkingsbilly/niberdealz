@@ -28,7 +28,10 @@ export const Route = createFileRoute("/")({
       { property: "og:description", content: "Free student marketplace. Buy and sell sneakers, textbooks, electronics and more with verified students near you — direct on WhatsApp." },
       { property: "og:url", content: "https://niberdealz.lovable.app/" },
     ],
-    links: [{ rel: "canonical", href: "https://niberdealz.lovable.app/" }],
+    links: [
+      { rel: "canonical", href: "https://niberdealz.lovable.app/" },
+      { rel: "preload", as: "image", href: img1.url, fetchpriority: "high" },
+    ],
     scripts: [
       {
         type: "application/ld+json",
