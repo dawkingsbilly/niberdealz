@@ -53,8 +53,11 @@ export const Route = createFileRoute("/")({
           "@context": "https://schema.org",
           "@type": "Organization",
           name: "Niberdealz",
+          alternateName: ["NIBERDEALZ", "Niber Dealz", "Niber-Dealz"],
           url: "https://niberdealz.lovable.app/",
           logo: "https://niberdealz.lovable.app/favicon.ico",
+          description: "South African student marketplace connecting verified vendors and buyers on WhatsApp.",
+          areaServed: "ZA",
         }),
       },
     ],
@@ -199,11 +202,11 @@ function Home() {
             <GraduationCap className="h-3.5 w-3.5" /> The student marketplace
           </div>
           <h1 className="font-display text-4xl md:text-6xl font-bold text-white max-w-3xl mx-auto leading-tight">
-            Buy and sell with students.<br />
+            Niberdealz — buy and sell with students.<br />
             <span className="text-[color:var(--accent)]">Connect on WhatsApp.</span>
           </h1>
           <p className="mt-5 text-lg text-white/85 max-w-xl mx-auto">
-            Sneakers, textbooks, electronics, furniture — all from students near you. Free to list. Free to browse.
+            Niberdealz is the South African student marketplace. Sneakers, textbooks, electronics, furniture — all from students near you. Free to list. Free to browse.
           </p>
 
           <div className="mt-8 max-w-xl mx-auto flex flex-col sm:flex-row gap-2">
