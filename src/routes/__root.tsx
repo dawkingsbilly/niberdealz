@@ -51,6 +51,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
+      { name: "google-site-verification", content: "gBW-lNyGoXaF3mBBUkhh9SMLZpV5sIaHnCksdht8ZoA" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Niber-Dealz — South African Marketplace" },
       { name: "description", content: "Niber-Dealz is the South African marketplace where verified vendors sell direct to buyers via WhatsApp. No buyer accounts needed." },
