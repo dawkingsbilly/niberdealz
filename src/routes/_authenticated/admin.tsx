@@ -13,13 +13,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SiteHeader, SiteFooter } from "@/components/site-header";
 import { adminDeleteProduct, ownerDeleteVendor, ownerListUsers, promoteToRole, sendVendorWarning, setReportStatus, ownerStoreDetail, setVendorStatus, createSaleCampaign, deleteSaleCampaign, createBroadcast, listBroadcasts } from "@/lib/marketplace.functions";
+import { ThemesTab } from "@/components/admin/themes-tab";
 
 export const Route = createFileRoute("/_authenticated/admin")({ component: Admin });
 
 function Admin() {
   const { user, roles, isLoading } = useAuth();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<"overview" | "approvals" | "listings" | "stores" | "sales" | "broadcasts" | "reports" | "users" | "admins">("overview");
+  const [tab, setTab] = useState<"overview" | "approvals" | "listings" | "stores" | "sales" | "themes" | "broadcasts" | "reports" | "users" | "admins">("overview");
 
   const isAdmin = roles.includes("admin");
   const isOwner = roles.includes("owner");
@@ -36,7 +37,7 @@ function Admin() {
   }
 
   const tabs = isOwner
-    ? (["overview", "approvals", "listings", "stores", "sales", "broadcasts", "reports", "users", "admins"] as const)
+    ? (["overview", "approvals", "listings", "stores", "sales", "themes", "broadcasts", "reports", "users", "admins"] as const)
     : (["overview", "approvals", "listings", "reports"] as const);
 
   return (
@@ -70,6 +71,7 @@ function Admin() {
         {tab === "listings" && <ListingsTab qc={qc} />}
         {tab === "stores" && isOwner && <StoresTab qc={qc} />}
         {tab === "sales" && isOwner && <SalesTab qc={qc} />}
+        {tab === "themes" && isOwner && <ThemesTab />}
         {tab === "broadcasts" && isOwner && <BroadcastsTab />}
         {tab === "reports" && <ReportsTab qc={qc} />}
         {tab === "users" && isOwner && <UsersTab />}
