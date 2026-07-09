@@ -37,7 +37,7 @@ function Admin() {
   }
 
   const tabs = isOwner
-    ? (["overview", "approvals", "listings", "stores", "sales", "broadcasts", "reports", "users", "admins"] as const)
+    ? (["overview", "approvals", "listings", "stores", "sales", "themes", "broadcasts", "reports", "users", "admins"] as const)
     : (["overview", "approvals", "listings", "reports"] as const);
 
   return (
