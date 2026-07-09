@@ -387,6 +387,36 @@ export type Database = {
           },
         ]
       }
+      site_themes: {
+        Row: {
+          activated_by: string | null
+          created_at: string
+          end_at: string
+          id: string
+          note: string | null
+          start_at: string
+          theme_key: string
+        }
+        Insert: {
+          activated_by?: string | null
+          created_at?: string
+          end_at: string
+          id?: string
+          note?: string | null
+          start_at?: string
+          theme_key: string
+        }
+        Update: {
+          activated_by?: string | null
+          created_at?: string
+          end_at?: string
+          id?: string
+          note?: string | null
+          start_at?: string
+          theme_key?: string
+        }
+        Relationships: []
+      }
       store_reviews: {
         Row: {
           comment: string
