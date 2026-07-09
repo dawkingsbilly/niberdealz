@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SiteHeader, SiteFooter } from "@/components/site-header";
 import { adminDeleteProduct, ownerDeleteVendor, ownerListUsers, promoteToRole, sendVendorWarning, setReportStatus, ownerStoreDetail, setVendorStatus, createSaleCampaign, deleteSaleCampaign, createBroadcast, listBroadcasts } from "@/lib/marketplace.functions";
+import { ThemesTab } from "@/components/admin/themes-tab";
 
 export const Route = createFileRoute("/_authenticated/admin")({ component: Admin });
 
