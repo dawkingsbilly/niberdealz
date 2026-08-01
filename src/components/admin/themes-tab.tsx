@@ -253,7 +253,6 @@ function ScheduleDialog({
         <div className="h-24 relative" style={{ background: theme.banner.gradient }}>
           <div className="absolute inset-0 flex items-center justify-center px-4 text-center font-semibold" style={{ color: theme.banner.fg }}>
             <span className="text-sm sm:text-base">
-              <span aria-hidden className="mr-1.5">{theme.emoji}</span>
               {theme.banner.text}
             </span>
           </div>

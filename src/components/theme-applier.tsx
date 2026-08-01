@@ -50,7 +50,6 @@ export function ThemeApplier() {
       style={{ background: preset.banner.gradient, color: preset.banner.fg }}
     >
       <span className="inline-flex items-center gap-2">
-        <span aria-hidden>{preset.emoji}</span>
         <span>{preset.banner.text}</span>
       </span>
     </div>
