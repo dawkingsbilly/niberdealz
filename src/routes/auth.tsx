@@ -11,8 +11,8 @@ import { Label } from "@/components/ui/label";
 import { SITE_NAME, WHATSAPP_CHANNEL_URL } from "@/lib/constants";
 
 const searchSchema = z.object({
-  mode: z.enum(["login", "register"]).catch("login"),
-  role: z.enum(["vendor", "ceo"]).catch("vendor"),
+  mode: z.enum(["login", "register"]).default("login").catch("login"),
+  role: z.enum(["vendor", "ceo"]).default("vendor").catch("vendor"),
   next: z.string().optional(),
 });
 
