@@ -70,9 +70,13 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
-  const [q, setQ] = useState("");
+  const { q: qParam } = Route.useSearch();
+  const [q, setQ] = useState(qParam ?? "");
   const [category, setCategory] = useState<string>("");
   const [slide, setSlide] = useState(0);
+
+  useEffect(() => { setQ(qParam ?? ""); }, [qParam]);
+
 
   useEffect(() => {
     const t = setInterval(() => setSlide((s) => (s + 1) % SLIDES.length), 4000);
