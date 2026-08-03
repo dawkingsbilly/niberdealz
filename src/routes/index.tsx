@@ -180,8 +180,8 @@ function Home() {
     <div className="min-h-screen flex flex-col">
       <SiteHeader />
 
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0">
+      <section className="container mx-auto px-4 pt-4 pb-6">
+        <div className="relative overflow-hidden rounded-2xl border border-border aspect-video">
           {SLIDES.map((img, i) => (
             i === 0 ? (
               <img
@@ -203,43 +203,32 @@ function Home() {
               />
             )
           ))}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70" />
-        </div>
-        <div className="relative container mx-auto px-4 py-20 md:py-28 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur border border-white/20 px-3 py-1 text-xs font-medium text-white/90 mb-5">
-            <GraduationCap className="h-3.5 w-3.5" /> The student marketplace
-          </div>
-          <h1 className="font-display text-4xl md:text-6xl font-bold text-white max-w-3xl mx-auto leading-tight">
-            Niberdealz — buy and sell with students.<br />
-            <span className="text-[color:var(--accent)]">Connect on WhatsApp.</span>
-          </h1>
-          <p className="mt-5 text-lg text-white/85 max-w-xl mx-auto">
-            Niberdealz is the South African student marketplace. Sneakers, textbooks, electronics, furniture — all from students near you. Free to list. Free to browse.
-          </p>
-
-          <div className="mt-8 max-w-xl mx-auto flex flex-col sm:flex-row gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Search sneakers, textbooks, laptops…"
-                className="h-12 pl-10 bg-white text-foreground"
-              />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 p-5 md:p-8">
+            <h1 className="font-display text-2xl md:text-4xl font-bold text-white">
+              Welcome to {SITE_NAME}. Shop now.
+            </h1>
+            <div className="mt-3 flex gap-1.5">
+              {SLIDES.map((_, i) => (
+                <button key={i} onClick={() => setSlide(i)} aria-label={`Slide ${i + 1}`}
+                  className={`h-1.5 rounded-full transition-all ${i === slide ? "w-8 bg-white" : "w-1.5 bg-white/50"}`} />
+              ))}
             </div>
-            <Button asChild size="lg" className="h-12 bg-[var(--deal)] hover:bg-[var(--deal)]/90 text-[color:var(--deal-foreground)] shadow-[var(--shadow-deal)]">
-              <Link to="/auth" search={{ mode: "register" }}>Sell something <ArrowRight className="ml-1 h-4 w-4" /></Link>
-            </Button>
           </div>
+        </div>
 
-          <div className="mt-8 flex justify-center gap-1.5">
-            {SLIDES.map((_, i) => (
-              <button key={i} onClick={() => setSlide(i)} aria-label={`Slide ${i + 1}`}
-                className={`h-1.5 rounded-full transition-all ${i === slide ? "w-8 bg-white" : "w-1.5 bg-white/40"}`} />
-            ))}
-          </div>
+        <div className="mt-4 max-w-xl relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search every store on Niberdealz"
+            aria-label="Search every store on Niberdealz"
+            className="h-12 pl-10"
+          />
         </div>
       </section>
+
 
       <section className="border-y border-border bg-background">
         <div className="container mx-auto px-4 py-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
