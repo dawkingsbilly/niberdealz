@@ -1,16 +1,19 @@
 import { Link, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
-import { LogOut, LayoutDashboard, ShieldCheck, Crown, ShieldAlert, Lock, Menu, MessageCircle, Mail, Home, LogIn, Store } from "lucide-react";
+import { LogOut, LayoutDashboard, ShieldCheck, Crown, ShieldAlert, Lock, Menu, MessageCircle, Mail, Home, LogIn, Store, Search, ShoppingCart } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SITE_NAME, CONTACT_EMAIL } from "@/lib/constants";
+import { useCart } from "@/lib/cart";
 import logoAsset from "@/assets/niber-logo.ico.asset.json";
 
 const WHATSAPP_CHANNEL = "https://wa.me/channel/0029VaOb9f1KbYMSEsUT6T46";
 const BRAND = SITE_NAME.toUpperCase();
+
 
 function Brand() {
   return (
