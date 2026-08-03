@@ -22,12 +22,14 @@ import img7 from "@/assets/slides/handoff.jpg.asset.json";
 const SLIDES = [img1, img2, img3, img4, img5, img6, img7];
 
 export const Route = createFileRoute("/")({
+  validateSearch: z.object({ q: z.string().optional() }),
   head: () => ({
     meta: [
-      { title: "Niberdealz — Student Marketplace on WhatsApp" },
-      { name: "description", content: "Free student marketplace. Buy and sell sneakers, textbooks, electronics and more with verified students near you — direct on WhatsApp." },
-      { property: "og:title", content: "Niberdealz — Student Marketplace on WhatsApp" },
-      { property: "og:description", content: "Free student marketplace. Buy and sell sneakers, textbooks, electronics and more with verified students near you — direct on WhatsApp." },
+      { title: "Niberdealz | Marketplace on WhatsApp" },
+      { name: "description", content: "Niberdealz is the marketplace where you buy and sell sneakers, clothing, textbooks, electronics and more with verified sellers near you, direct on WhatsApp." },
+      { property: "og:title", content: "Niberdealz | Marketplace on WhatsApp" },
+      { property: "og:description", content: "Buy and sell sneakers, clothing, textbooks and electronics with verified sellers near you, direct on WhatsApp." },
+
       { property: "og:url", content: "https://niberdealz.lovable.app/" },
     ],
     links: [
