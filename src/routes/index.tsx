@@ -249,9 +249,9 @@ function Home() {
       <section className="border-y border-border bg-background">
         <div className="container mx-auto px-4 py-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
           {[
-            { Icon: BadgeCheck, t: "Verified student sellers", s: "Every store reviewed by our team" },
-            { Icon: ShieldCheck, t: "Safe campus meet-ups", s: "Inspect before you pay" },
-            { Icon: Handshake, t: "0% commission", s: "Sellers keep 100%" },
+            { Icon: BadgeCheck, t: "Verified sellers", s: "Every store reviewed by our team" },
+            { Icon: ShieldCheck, t: "Safe meet ups", s: "Inspect before you pay" },
+            { Icon: Handshake, t: "Zero commission", s: "Sellers keep everything they earn" },
             { Icon: MessageCircle, t: "Direct on WhatsApp", s: "No middleman, no waiting" },
           ].map(({ Icon, t, s }) => (
             <div key={t} className="flex items-start gap-2.5">
@@ -262,19 +262,6 @@ function Home() {
         </div>
       </section>
 
-      <section className="border-b border-border bg-card/60">
-        <div className="container mx-auto px-4 py-4 flex gap-2 overflow-x-auto">
-          <button
-            onClick={() => setCategory("")}
-            className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium border transition ${category === "" ? "bg-foreground text-background border-foreground" : "bg-background border-border hover:bg-muted"}`}
-          >All</button>
-          {CATEGORIES.map((c) => (
-            <button key={c} onClick={() => setCategory(c)}
-              className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium border transition ${category === c ? "bg-foreground text-background border-foreground" : "bg-background border-border hover:bg-muted"}`}
-            >{c}</button>
-          ))}
-        </div>
-      </section>
 
       {flashSales.length > 0 && (
         <section className="container mx-auto px-4 py-8">
