@@ -276,7 +276,71 @@ function Home() {
         </div>
       </section>
 
+      {flashSales.length > 0 && (
+        <section className="container mx-auto px-4 py-8">
+          <div className="mb-4 flex items-end justify-between gap-4">
+            <div>
+              <h2 className="font-display text-2xl md:text-3xl font-bold flex items-center gap-2">
+                <Zap className="h-6 w-6 text-[color:var(--deal)]" />Flash sales
+              </h2>
+              <p className="text-muted-foreground text-sm">Live discounts from stores running a sale right now.</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {flashSales.map((p: any) => <ProductCard key={p.id} p={p} />)}
+          </div>
+        </section>
+      )}
+
+      {stores.length > 0 && (
+        <section className="container mx-auto px-4 py-8">
+          <div className="mb-4">
+            <h2 className="font-display text-2xl md:text-3xl font-bold flex items-center gap-2">
+              <Store className="h-6 w-6 text-[color:var(--deal)]" />Stores on {SITE_NAME}
+            </h2>
+            <p className="text-muted-foreground text-sm">Browse a store and see everything they sell.</p>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {(stores as any[]).map((s) => (
+              <Link
+                key={s.id}
+                to="/vendor/$id"
+                params={{ id: s.id }}
+                className="rounded-2xl bg-card border border-border p-4 shadow-[var(--shadow-card)] hover:border-foreground/30 transition flex items-center gap-3"
+              >
+                <div className="h-12 w-12 rounded-xl overflow-hidden bg-muted flex items-center justify-center shrink-0">
+                  {s.logo_url ? <img src={s.logo_url} alt="" className="h-full w-full object-cover" /> : <Store className="h-5 w-5 text-muted-foreground" />}
+                </div>
+                <div className="min-w-0">
+                  <div className="font-semibold truncate flex items-center gap-1">
+                    {s.business_name}
+                    {s.verified && <BadgeCheck className="h-4 w-4 text-sky-500 shrink-0" />}
+                    {s.is_official && <Crown className="h-3.5 w-3.5 shrink-0" />}
+                  </div>
+                  <div className="text-xs text-muted-foreground truncate">{s.city} {s.category ? `\u00b7 ${s.category}` : ""}</div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="border-y border-border bg-card/60">
+        <div className="container mx-auto px-4 py-4 flex gap-2 overflow-x-auto">
+          <button
+            onClick={() => setCategory("")}
+            className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium border transition ${category === "" ? "bg-foreground text-background border-foreground" : "bg-background border-border hover:bg-muted"}`}
+          >All</button>
+          {CATEGORIES.map((c) => (
+            <button key={c} onClick={() => setCategory(c)}
+              className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium border transition ${category === c ? "bg-foreground text-background border-foreground" : "bg-background border-border hover:bg-muted"}`}
+            >{c}</button>
+          ))}
+        </div>
+      </section>
+
       <section className="container mx-auto px-4 py-10 flex-1">
+
         <div className="mb-6 flex items-end justify-between gap-4">
           <div>
             <h2 className="font-display text-2xl md:text-3xl font-bold flex items-center gap-2"><Tag className="h-6 w-6 text-[color:var(--deal)]" />Fresh listings</h2>
