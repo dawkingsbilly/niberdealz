@@ -176,6 +176,22 @@ function Home() {
 
   const myCity = data?.myCity ?? "";
 
+  const flashSales = useMemo(() => products.filter((p: any) => p.discount_pct).slice(0, 8), [products]);
+
+  const { data: stores = [] } = useQuery({
+    queryKey: ["home-stores"],
+    queryFn: async () => {
+      const { data: rows } = await supabase
+        .from("vendors")
+        .select("id, business_name, city, category, logo_url, verified, is_official")
+        .eq("status", "approved")
+        .order("is_official", { ascending: false })
+        .limit(12);
+      return rows ?? [];
+    },
+  });
+
+
   return (
     <div className="min-h-screen flex flex-col">
       <SiteHeader />
