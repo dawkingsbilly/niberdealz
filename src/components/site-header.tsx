@@ -128,14 +128,26 @@ export function SiteHeader() {
                 <SheetTitle className="font-display tracking-tight">{BRAND}</SheetTitle>
               </SheetHeader>
 
+              <form onSubmit={runSearch} className="mt-4 relative md:hidden">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={term}
+                  onChange={(e) => setTerm(e.target.value)}
+                  placeholder="Search all stores"
+                  aria-label="Search all stores"
+                  className="h-10 pl-10"
+                />
+              </form>
+
               <nav className="mt-4 flex flex-col gap-1">
-                <MenuLink to="/" icon={Home} label="Browse listings" />
+                <MenuLink to="/" icon={Home} label="Browse" />
+                <MenuLink to="/cart" icon={ShoppingCart} label="Your cart" />
                 <MenuLink to="/safety" icon={ShieldAlert} label="Safety guidelines" />
                 <MenuLink to="/contact" icon={Mail} label="Contact us" />
 
                 {!isLoading && user ? (
                   <>
-                    <MenuLink to="/dashboard" icon={LayoutDashboard} label="My dashboard" />
+                    <MenuLink to="/dashboard" icon={Store} label="Start selling" />
                     {canModerate && <MenuLink to="/admin" icon={isCeo ? Crown : ShieldCheck} label={isCeo ? "CEO room" : "Admin"} />}
                     <MenuLink icon={LogOut} label="Sign out" onClick={handleSignOut} />
                   </>
@@ -148,11 +160,12 @@ export function SiteHeader() {
                     </SheetClose>
                     <SheetClose asChild>
                       <Link to="/auth" search={{ mode: "register" }} className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-foreground/80 hover:bg-accent hover:text-foreground transition">
-                        <Store className="h-4 w-4" />Open a free store
+                        <Store className="h-4 w-4" />Create a free account
                       </Link>
                     </SheetClose>
                   </>
                 )}
+
 
                 <div className="my-3 h-px bg-border" />
 
