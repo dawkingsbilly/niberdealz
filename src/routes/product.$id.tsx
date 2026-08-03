@@ -245,8 +245,33 @@ function ProductDetail() {
                   </>
                 );
               })()}
-              <p className="text-xs text-muted-foreground text-center">You'll chat directly with the seller. Niberdealz doesn't handle payment.</p>
+              <Button
+                size="lg"
+                variant="outline"
+                disabled={product.is_sold}
+                className="w-full h-12 gap-2 font-semibold"
+                onClick={() => {
+                  addToCart({
+                    product_id: product.id,
+                    vendor_id: product.vendor_id,
+                    title: product.title,
+                    price_zar: Number(product.price_zar),
+                    image_url: product.image_url ?? null,
+                    size: product.size ?? null,
+                    color: product.color ?? null,
+                    qty: 1,
+                    comment: "",
+                    vendor_name: vendor?.business_name ?? "Store",
+                    whatsapp_number: vendor?.whatsapp_number ?? "",
+                  });
+                  toast.success("Added to your cart");
+                }}
+              >
+                <ShoppingCart className="h-5 w-5" /> Add to cart
+              </Button>
+              <p className="text-xs text-muted-foreground text-center">You chat directly with the seller. Niberdealz does not handle payment.</p>
             </div>
+
 
             <div className="mt-4 rounded-lg border border-amber-300/40 bg-amber-50 dark:bg-amber-500/5 p-3 text-xs text-foreground/80">
               <strong>Off-campus / can't inspect in person?</strong> Ask the seller for a short video of the item, check their store reviews below, and only send money once you're sure they're reliable. Meet in a public place if possible.
