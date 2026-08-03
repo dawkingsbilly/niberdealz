@@ -1,16 +1,19 @@
 import { Link, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
-import { LogOut, LayoutDashboard, ShieldCheck, Crown, ShieldAlert, Lock, Menu, MessageCircle, Mail, Home, LogIn, Store } from "lucide-react";
+import { LogOut, LayoutDashboard, ShieldCheck, Crown, ShieldAlert, Lock, Menu, MessageCircle, Mail, Home, LogIn, Store, Search, ShoppingCart } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SITE_NAME, CONTACT_EMAIL } from "@/lib/constants";
+import { useCart } from "@/lib/cart";
 import logoAsset from "@/assets/niber-logo.ico.asset.json";
 
 const WHATSAPP_CHANNEL = "https://wa.me/channel/0029VaOb9f1KbYMSEsUT6T46";
 const BRAND = SITE_NAME.toUpperCase();
+
 
 function Brand() {
   return (
@@ -33,6 +36,8 @@ export function SiteHeader() {
   const { user, roles, isLoading } = useAuth();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [term, setTerm] = useState("");
+  const { count } = useCart();
   const canModerate = roles.includes("admin") || roles.includes("owner");
   const isCeo = roles.includes("owner");
 
@@ -40,6 +45,12 @@ export function SiteHeader() {
     await supabase.auth.signOut();
     setOpen(false);
     router.navigate({ to: "/" });
+  };
+
+  const runSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setOpen(false);
+    router.navigate({ to: "/", search: term.trim() ? { q: term.trim() } : {} });
   };
 
   const MenuLink = ({ to, icon: Icon, label, onClick }: { to?: string; icon: any; label: string; onClick?: () => void }) => {
@@ -63,14 +74,31 @@ export function SiteHeader() {
       <div className="container mx-auto flex h-16 items-center justify-between gap-2 px-4">
         <Brand />
 
-        <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
-          <Link to="/" className="text-foreground/70 hover:text-foreground transition" activeProps={{ className: "text-foreground" }} activeOptions={{ exact: true }}>Browse</Link>
-          <Link to="/safety" className="text-foreground/70 hover:text-foreground transition">Safety</Link>
-          <Link to="/contact" className="text-foreground/70 hover:text-foreground transition">Contact</Link>
-        </nav>
+        <form onSubmit={runSearch} className="hidden md:flex flex-1 max-w-md relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            value={term}
+            onChange={(e) => setTerm(e.target.value)}
+            placeholder="Search all stores"
+            aria-label="Search all stores"
+            className="h-10 pl-10"
+          />
+        </form>
 
         <div className="flex items-center gap-1.5">
           <ThemeToggle className="hidden sm:inline-flex" />
+
+          <Button asChild variant="ghost" size="icon" aria-label="Cart" className="relative">
+            <Link to="/cart">
+              <ShoppingCart className="h-5 w-5" />
+              {count > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-[var(--deal)] text-[color:var(--deal-foreground)] text-[10px] font-bold flex items-center justify-center">
+                  {count}
+                </span>
+              )}
+            </Link>
+          </Button>
+
 
           {!isLoading && user ? (
             <>
@@ -100,14 +128,26 @@ export function SiteHeader() {
                 <SheetTitle className="font-display tracking-tight">{BRAND}</SheetTitle>
               </SheetHeader>
 
+              <form onSubmit={runSearch} className="mt-4 relative md:hidden">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={term}
+                  onChange={(e) => setTerm(e.target.value)}
+                  placeholder="Search all stores"
+                  aria-label="Search all stores"
+                  className="h-10 pl-10"
+                />
+              </form>
+
               <nav className="mt-4 flex flex-col gap-1">
-                <MenuLink to="/" icon={Home} label="Browse listings" />
+                <MenuLink to="/" icon={Home} label="Browse" />
+                <MenuLink to="/cart" icon={ShoppingCart} label="Your cart" />
                 <MenuLink to="/safety" icon={ShieldAlert} label="Safety guidelines" />
                 <MenuLink to="/contact" icon={Mail} label="Contact us" />
 
                 {!isLoading && user ? (
                   <>
-                    <MenuLink to="/dashboard" icon={LayoutDashboard} label="My dashboard" />
+                    <MenuLink to="/dashboard" icon={Store} label="Start selling" />
                     {canModerate && <MenuLink to="/admin" icon={isCeo ? Crown : ShieldCheck} label={isCeo ? "CEO room" : "Admin"} />}
                     <MenuLink icon={LogOut} label="Sign out" onClick={handleSignOut} />
                   </>
@@ -120,11 +160,12 @@ export function SiteHeader() {
                     </SheetClose>
                     <SheetClose asChild>
                       <Link to="/auth" search={{ mode: "register" }} className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-foreground/80 hover:bg-accent hover:text-foreground transition">
-                        <Store className="h-4 w-4" />Open a free store
+                        <Store className="h-4 w-4" />Create a free account
                       </Link>
                     </SheetClose>
                   </>
                 )}
+
 
                 <div className="my-3 h-px bg-border" />
 
