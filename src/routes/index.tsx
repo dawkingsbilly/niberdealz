@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { ArrowRight, Search, MessageCircle, Tag, ShieldCheck, Truck, BadgeCheck, Users, Sparkles, Store, Handshake, Zap, Crown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { isPromoActive } from "@/lib/promotions";
 import { SiteHeader, SiteFooter } from "@/components/site-header";
 import { ProductCard, type ProductCardData } from "@/components/product-card";
 import { Button } from "@/components/ui/button";
@@ -88,7 +89,7 @@ function Home() {
     queryFn: async () => {
       let query = supabase
         .from("products")
-        .select("id, title, price_zar, category, image_url, stock, is_sold, vendor_id, vendors!inner(business_name, city, verified, is_official, status)")
+        .select("id, title, price_zar, category, image_url, stock, is_sold, vendor_id, vendors!inner(business_name, city, verified, is_official, status, plan, plan_active_until)")
         .eq("status", "approved")
         .eq("vendors.status", "approved")
         .order("created_at", { ascending: false })
@@ -159,7 +160,7 @@ function Home() {
 
   const products = useMemo(() => {
     const list = data?.list ?? [];
-    // Ordering: nearby first, then on-sale, then NIBER-DEALZ STORE, then everyone else
+    // Ordering: nearby first, then on sale, then boosted stores, then NIBER-DEALZ STORE, then everyone else
     return [...list].sort((a: any, b: any) => {
       const aN = a._nearby ? 1 : 0;
       const bN = b._nearby ? 1 : 0;
@@ -167,6 +168,9 @@ function Home() {
       const aSale = a.discount_pct ? 1 : 0;
       const bSale = b.discount_pct ? 1 : 0;
       if (aSale !== bSale) return bSale - aSale;
+      const aBoost = isPromoActive(a.vendors) ? 1 : 0;
+      const bBoost = isPromoActive(b.vendors) ? 1 : 0;
+      if (aBoost !== bBoost) return bBoost - aBoost;
       const aOff = a.vendors?.is_official ? 1 : 0;
       const bOff = b.vendors?.is_official ? 1 : 0;
       if (aOff !== bOff) return bOff - aOff;
@@ -183,7 +187,7 @@ function Home() {
     queryFn: async () => {
       const { data: rows } = await supabase
         .from("vendors")
-        .select("id, business_name, city, category, logo_url, verified, is_official")
+        .select("id, business_name, city, category, logo_url, verified, is_official, plan, plan_active_until")
         .eq("status", "approved")
         .order("is_official", { ascending: false })
         .limit(12);
@@ -303,6 +307,7 @@ function Home() {
                     {s.business_name}
                     {s.verified && <BadgeCheck className="h-4 w-4 text-sky-500 shrink-0" />}
                     {s.is_official && <Crown className="h-3.5 w-3.5 shrink-0" />}
+                    {!s.is_official && isPromoActive(s) && <span className="rounded-full bg-[var(--deal)] text-[color:var(--deal-foreground)] text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5">Boosted</span>}
                   </div>
                   <div className="text-xs text-muted-foreground truncate">{s.city} {s.category ? `\u00b7 ${s.category}` : ""}</div>
                 </div>

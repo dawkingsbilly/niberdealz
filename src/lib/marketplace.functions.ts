@@ -576,3 +576,151 @@ export const listBroadcasts = createServerFn({ method: "POST" })
     return { broadcasts: data ?? [] };
   });
 
+
+// ====== Promotion plans (paid boosts) ======
+const PromoPaymentInput = z.object({
+  plan: z.enum(["starter", "growth", "unlimited"]),
+  proof_url: z.string().trim().min(5).max(1000),
+  reference: z.string().trim().max(120).optional(),
+});
+
+export const submitPromotionPayment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => PromoPaymentInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const { planPrice } = await import("@/lib/promotions");
+    const { data: vendor } = await context.supabase
+      .from("vendors").select("id, status").eq("id", context.userId).maybeSingle();
+    if (!vendor) throw new Error("Create your store first.");
+    if (vendor.status !== "approved") throw new Error("Your store must be approved before you can promote it.");
+    const { error } = await context.supabase.from("payments").insert({
+      vendor_id: context.userId,
+      plan: data.plan,
+      amount_zar: planPrice(data.plan),
+      proof_url: data.proof_url,
+      reference: data.reference || null,
+      status: "pending",
+    } as any);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const listMyPromotionPayments = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("payments").select("*").eq("vendor_id", context.userId)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return { payments: data ?? [] };
+  });
+
+export const staffListPromotionPayments = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const [{ data: isAdmin }, { data: isOwner }] = await Promise.all([
+      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" }),
+      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "owner" }),
+    ]);
+    if (!isAdmin && !isOwner) throw new Error("Forbidden");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin
+      .from("payments")
+      .select("*, vendors(business_name, owner_name, email, city, plan, plan_active_until)")
+      .order("created_at", { ascending: false })
+      .limit(300);
+    if (error) throw new Error(error.message);
+    return { payments: (data ?? []) as any[] };
+  });
+
+const PaymentStatusInput = z.object({
+  payment_id: z.string().uuid(),
+  status: z.enum(["approved", "rejected", "pending"]),
+  admin_notes: z.string().trim().max(500).optional(),
+});
+
+export const setPromotionPaymentStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => PaymentStatusInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const [{ data: isAdmin }, { data: isOwner }] = await Promise.all([
+      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" }),
+      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "owner" }),
+    ]);
+    if (!isAdmin && !isOwner) throw new Error("Forbidden");
+    const { planDays } = await import("@/lib/promotions");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: payment, error: pErr } = await supabaseAdmin
+      .from("payments").select("*").eq("id", data.payment_id).maybeSingle();
+    if (pErr) throw new Error(pErr.message);
+    if (!payment) throw new Error("Payment not found.");
+
+    const { error } = await supabaseAdmin.from("payments").update({
+      status: data.status,
+      admin_notes: data.admin_notes || null,
+      approved_at: data.status === "approved" ? new Date().toISOString() : null,
+    } as any).eq("id", data.payment_id);
+    if (error) throw new Error(error.message);
+
+    if (data.status === "approved") {
+      const days = planDays(payment.plan as any);
+      const until = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+      const { error: vErr } = await supabaseAdmin.from("vendors").update({
+        plan: payment.plan,
+        plan_active_until: until,
+      } as any).eq("id", payment.vendor_id);
+      if (vErr) throw new Error(vErr.message);
+    }
+    return { ok: true };
+  });
+
+// ====== Vendor analytics ======
+export const vendorAnalytics = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ days: z.number().int().min(7).max(90).default(14) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const since = new Date(Date.now() - data.days * 24 * 60 * 60 * 1000).toISOString();
+    const { data: events, error } = await context.supabase
+      .from("product_events")
+      .select("event_type, created_at, product_id")
+      .eq("vendor_id", context.userId)
+      .gte("created_at", since)
+      .order("created_at", { ascending: true })
+      .limit(5000);
+    if (error) throw new Error(error.message);
+
+    const byDay = new Map<string, { day: string; views: number; clicks: number }>();
+    for (let i = data.days - 1; i >= 0; i--) {
+      const key = new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      byDay.set(key, { day: key.slice(5), views: 0, clicks: 0 });
+    }
+    const perProduct = new Map<string, { product_id: string; views: number; clicks: number }>();
+    for (const e of events ?? []) {
+      const key = String(e.created_at).slice(0, 10);
+      const row = byDay.get(key);
+      const isView = e.event_type === "view";
+      if (row) { if (isView) row.views += 1; else row.clicks += 1; }
+      const pp = perProduct.get(e.product_id) ?? { product_id: e.product_id, views: 0, clicks: 0 };
+      if (isView) pp.views += 1; else pp.clicks += 1;
+      perProduct.set(e.product_id, pp);
+    }
+
+    const totals = { views: 0, clicks: 0 };
+    for (const r of byDay.values()) { totals.views += r.views; totals.clicks += r.clicks; }
+
+    const ids = [...perProduct.keys()];
+    let titles: Record<string, string> = {};
+    if (ids.length) {
+      const { data: prods } = await context.supabase
+        .from("products").select("id, title").in("id", ids);
+      titles = Object.fromEntries((prods ?? []).map((p) => [p.id, p.title]));
+    }
+
+    const top = [...perProduct.values()]
+      .map((p) => ({ ...p, title: titles[p.product_id] ?? "Removed listing" }))
+      .sort((a, b) => b.views - a.views)
+      .slice(0, 5);
+
+    return { series: [...byDay.values()], totals, top };
+  });
