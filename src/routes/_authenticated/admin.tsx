@@ -14,13 +14,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { SiteHeader, SiteFooter } from "@/components/site-header";
 import { adminDeleteProduct, ownerDeleteVendor, ownerListUsers, promoteToRole, sendVendorWarning, setReportStatus, ownerStoreDetail, setVendorStatus, createSaleCampaign, deleteSaleCampaign, createBroadcast, listBroadcasts } from "@/lib/marketplace.functions";
 import { ThemesTab } from "@/components/admin/themes-tab";
+import { PaymentsTab } from "@/components/admin/payments-tab";
 
 export const Route = createFileRoute("/_authenticated/admin")({ component: Admin });
 
 function Admin() {
   const { user, roles, isLoading } = useAuth();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<"overview" | "approvals" | "listings" | "stores" | "sales" | "themes" | "broadcasts" | "reports" | "users" | "admins">("overview");
+  const [tab, setTab] = useState<"overview" | "approvals" | "listings" | "stores" | "payments" | "sales" | "themes" | "broadcasts" | "reports" | "users" | "admins">("overview");
 
   const isAdmin = roles.includes("admin");
   const isOwner = roles.includes("owner");
@@ -37,8 +38,8 @@ function Admin() {
   }
 
   const tabs = isOwner
-    ? (["overview", "approvals", "listings", "stores", "sales", "themes", "broadcasts", "reports", "users", "admins"] as const)
-    : (["overview", "approvals", "listings", "reports"] as const);
+    ? (["overview", "approvals", "listings", "stores", "payments", "sales", "themes", "broadcasts", "reports", "users", "admins"] as const)
+    : (["overview", "approvals", "listings", "payments", "reports"] as const);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -70,6 +71,7 @@ function Admin() {
         {tab === "approvals" && <ApprovalsTab qc={qc} />}
         {tab === "listings" && <ListingsTab qc={qc} />}
         {tab === "stores" && isOwner && <StoresTab qc={qc} />}
+        {tab === "payments" && <PaymentsTab />}
         {tab === "sales" && isOwner && <SalesTab qc={qc} />}
         {tab === "themes" && isOwner && <ThemesTab />}
         {tab === "broadcasts" && isOwner && <BroadcastsTab />}

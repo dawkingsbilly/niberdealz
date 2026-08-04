@@ -13,6 +13,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { SiteHeader, SiteFooter } from "@/components/site-header";
 import { CATEGORIES } from "@/lib/constants";
+import { PromotionsCard, PromoPopup } from "@/components/vendor/promotions-card";
+import { VendorAnalyticsCard } from "@/components/vendor/analytics-card";
 import { submitProduct, setProductSold, updateProduct, acknowledgeWarning, updateVendorProfile, respondToCampaign } from "@/lib/marketplace.functions";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({ component: Dashboard });
@@ -96,7 +98,8 @@ function Dashboard() {
   if (vLoading || !vendor) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>;
 
   const onAdd = async () => {
-    if (!newP.title || !newP.price_zar || !newP.category || newFiles.length === 0) { toast.error("Fill all fields and add at least one image."); return; }
+    if (!newP.title || !newP.price_zar || !newP.category) { toast.error("Fill in the name, price and category."); return; }
+    if (newFiles.length < 3) { toast.error("Add at least 3 photos so buyers trust the listing."); return; }
     setAdding(true);
     try {
       const images = await uploadImages(newFiles.slice(0, MAX_IMAGES), user!.id);
@@ -211,6 +214,15 @@ function Dashboard() {
           </div>
         )}
 
+        {vendor.status === "approved" && (
+          <>
+            <div id="promote-anchor" />
+            <PromotionsCard vendor={vendor} userId={user!.id} />
+            <VendorAnalyticsCard userId={user!.id} />
+            <PromoPopup vendor={vendor} onPromote={() => { if (typeof document !== "undefined") document.getElementById("promote-anchor")?.scrollIntoView({ behavior: "smooth" }); }} />
+          </>
+        )}
+
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-display text-2xl font-bold flex items-center gap-2"><Package className="h-6 w-6" />Your listings</h2>
           <Button onClick={() => setShowAdd(!showAdd)} className="bg-[var(--deal)] hover:bg-[var(--deal)]/90 text-[color:var(--deal-foreground)]"><Plus className="h-4 w-4 mr-1.5" /> Add listing</Button>
@@ -290,7 +302,7 @@ function ProductForm({ value, onChange, files, setFiles, existingUrls, onRemoveE
       <div className="space-y-1.5"><Label>Color (optional)</Label><Input value={value.color} onChange={(e) => onChange({ ...value, color: e.target.value })} placeholder="e.g. Black" /></div>
       <div className="space-y-1.5 sm:col-span-2"><Label>Description *</Label><Textarea rows={4} value={value.description} onChange={(e) => onChange({ ...value, description: e.target.value })} placeholder="Condition, details, where to meet…" /></div>
       <div className="space-y-1.5 sm:col-span-2">
-        <Label>Photos * (up to {MAX_IMAGES}, first one is the cover)</Label>
+        <Label>Photos * (3 to {MAX_IMAGES}, first one is the cover)</Label>
         {(existingUrls.length > 0 || files.length > 0) && (
           <div className="flex flex-wrap gap-2 mb-2">
             {existingUrls.map((u) => (
@@ -333,7 +345,7 @@ function EditDialog({ product, userId, updateFn, onClose, onSaved }: any) {
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
-    if (existing.length + files.length === 0) { toast.error("Add at least one photo."); return; }
+    if (existing.length + files.length < 3) { toast.error("Keep at least 3 photos on the listing."); return; }
     setSaving(true);
     try {
       const uploaded = await uploadImages(files, userId);
