@@ -33,6 +33,10 @@ function RegisterShop() {
     website_url: "",
     checkout_pref: "whatsapp" as "whatsapp" | "website" | "both",
   });
+  const [sellerType, setSellerType] = useState<"student" | "business">("student");
+  const [studentEmail, setStudentEmail] = useState("");
+  const [agree, setAgree] = useState(false);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [hasShop, setHasShop] = useState(false);
 
@@ -58,7 +62,12 @@ function RegisterShop() {
   }
 
   const update = (k: keyof typeof form, v: any) => setForm((f) => ({ ...f, [k]: v }));
+  const studentEmailOk = sellerType !== "student" || /^[^\s@]+@[^\s@]+\.ac\.za$/i.test(studentEmail.trim());
   const canSubmit =
+    agree &&
+    !!logoFile &&
+    studentEmailOk &&
+    (sellerType !== "business" || form.is_formal_business) &&
     form.business_name.length >= 2 &&
     form.owner_name.length >= 2 &&
     /^[+0-9 ]{9,20}$/.test(form.whatsapp_number) &&
@@ -69,7 +78,23 @@ function RegisterShop() {
   const onSubmit = async () => {
     setLoading(true);
     try {
-      const res = await submit({ data: form });
+      let logo_url: string | null = null;
+      if (logoFile) {
+        const okTypes = ["image/jpeg", "image/png", "image/webp", "image/avif"];
+        if (!okTypes.includes(logoFile.type)) throw new Error("Logo must be a JPG, PNG, WEBP or AVIF image.");
+        if (logoFile.size > 5 * 1024 * 1024) throw new Error("Logo must be under 5 MB.");
+        const ext = logoFile.type.split("/")[1] === "jpeg" ? "jpg" : logoFile.type.split("/")[1];
+        const path = `${user!.id}/${crypto.randomUUID()}.${ext}`;
+        const { error: uErr } = await supabase.storage.from("vendor-logos").upload(path, logoFile, { contentType: logoFile.type });
+        if (uErr) throw uErr;
+        const { data: signed, error: sErr } = await supabase.storage.from("vendor-logos").createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
+        if (sErr) throw sErr;
+        logo_url = signed.signedUrl;
+      }
+      const description = sellerType === "student"
+        ? `${form.business_description}\n\nStudent seller. Campus email: ${studentEmail.trim()}`
+        : form.business_description;
+      const res = await submit({ data: { ...form, business_description: description, logo_url } });
       if (res?.pending) toast.success("Store submitted! The CEO will review and approve it shortly.");
       else toast.success("Welcome to Niberdealz! Your store is live.");
       navigate({ to: "/dashboard" });
@@ -147,6 +172,13 @@ function RegisterShop() {
               )}
             </div>
           </div>
+
+          <label className="flex items-start gap-2 mt-5 cursor-pointer">
+            <input type="checkbox" className="mt-1" checked={agree} onChange={(e) => setAgree(e.target.checked)} />
+            <span className="text-xs text-muted-foreground">
+              I agree to the Niberdealz Terms of Service, Privacy Policy and Safety Guidelines. I confirm my details are true and that I will only list items I own and may legally sell.
+            </span>
+          </label>
 
           <Button onClick={onSubmit} disabled={!canSubmit || loading} className="w-full mt-6 bg-[var(--deal)] hover:bg-[var(--deal)]/90 text-[color:var(--deal-foreground)]">
             {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Open my store
