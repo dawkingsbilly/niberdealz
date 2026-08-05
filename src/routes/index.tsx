@@ -411,6 +411,23 @@ function Home() {
         </div>
       </section>
 
+      <section className="border-t border-border bg-secondary/40">
+        <div className="container mx-auto px-4 py-8 grid grid-cols-2 md:grid-cols-4 gap-5 text-sm">
+          {[
+            { Icon: BadgeCheck, t: "Verified sellers", s: "Every store reviewed by our team" },
+            { Icon: ShieldCheck, t: "Safe meet ups", s: "Inspect before you pay" },
+            { Icon: Handshake, t: "Zero commission", s: "Sellers keep everything they earn" },
+            { Icon: MessageCircle, t: "Direct on WhatsApp", s: "No middleman, no waiting" },
+          ].map(({ Icon, t, s }) => (
+            <div key={t} className="flex items-start gap-2.5">
+              <Icon className="h-5 w-5 text-[color:var(--deal)] mt-0.5 shrink-0" />
+              <div className="min-w-0"><div className="font-semibold leading-tight">{t}</div><div className="text-xs text-muted-foreground">{s}</div></div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+
       <SiteFooter />
     </div>
   );
