@@ -72,6 +72,8 @@ function RegisterShop() {
   const canSubmit =
     agree &&
     !!logoFile &&
+    appFiles.length >= 3 &&
+    appFiles.length <= 6 &&
     studentEmailOk &&
     (sellerType !== "business" || form.is_formal_business) &&
     form.business_name.length >= 2 &&
@@ -81,27 +83,30 @@ function RegisterShop() {
     form.category &&
     form.business_description.length >= 10;
 
+  const uploadOne = async (file: File, bucket: string) => {
+    const okTypes = ["image/jpeg", "image/png", "image/webp", "image/avif"];
+    if (!okTypes.includes(file.type)) throw new Error("Images must be JPG, PNG, WEBP or AVIF.");
+    if (file.size > 5 * 1024 * 1024) throw new Error("Each image must be under 5 MB.");
+    const ext = file.type.split("/")[1] === "jpeg" ? "jpg" : file.type.split("/")[1];
+    const path = `${user!.id}/${crypto.randomUUID()}.${ext}`;
+    const { error: uErr } = await supabase.storage.from(bucket).upload(path, file, { contentType: file.type });
+    if (uErr) throw uErr;
+    const { data: signed, error: sErr } = await supabase.storage.from(bucket).createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
+    if (sErr) throw sErr;
+    return signed.signedUrl;
+  };
+
   const onSubmit = async () => {
     setLoading(true);
     try {
-      let logo_url: string | null = null;
-      if (logoFile) {
-        const okTypes = ["image/jpeg", "image/png", "image/webp", "image/avif"];
-        if (!okTypes.includes(logoFile.type)) throw new Error("Logo must be a JPG, PNG, WEBP or AVIF image.");
-        if (logoFile.size > 5 * 1024 * 1024) throw new Error("Logo must be under 5 MB.");
-        const ext = logoFile.type.split("/")[1] === "jpeg" ? "jpg" : logoFile.type.split("/")[1];
-        const path = `${user!.id}/${crypto.randomUUID()}.${ext}`;
-        const { error: uErr } = await supabase.storage.from("vendor-logos").upload(path, logoFile, { contentType: logoFile.type });
-        if (uErr) throw uErr;
-        const { data: signed, error: sErr } = await supabase.storage.from("vendor-logos").createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
-        if (sErr) throw sErr;
-        logo_url = signed.signedUrl;
-      }
+      const logo_url = logoFile ? await uploadOne(logoFile, "vendor-logos") : null;
+      const application_images: string[] = [];
+      for (const f of appFiles.slice(0, 6)) application_images.push(await uploadOne(f, "product-images"));
       const description = sellerType === "student"
         ? `${form.business_description}\n\nStudent seller. Campus email: ${studentEmail.trim()}`
         : form.business_description;
-      const res = await submit({ data: { ...form, business_description: description, logo_url } });
-      if (res?.pending) toast.success("Store submitted! The CEO will review and approve it shortly.");
+      const res = await submit({ data: { ...form, business_description: description, logo_url, application_images } });
+      if (res?.pending) toast.success("Store submitted! The CEO will review your photos and approve it shortly.");
       else toast.success("Welcome to Niberdealz! Your store is live.");
       navigate({ to: "/dashboard" });
     } catch (e: any) {
@@ -110,6 +115,7 @@ function RegisterShop() {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen bg-[var(--gradient-hero)] px-4 py-10">
