@@ -512,6 +512,7 @@ export type Database = {
         Row: {
           ai_review_notes: string | null
           ai_risk_score: number | null
+          application_images: string[]
           business_description: string
           business_name: string
           category: string
@@ -522,12 +523,16 @@ export type Database = {
           id: string
           is_formal_business: boolean
           is_official: boolean
+          legal_name: string | null
           logo_url: string | null
           owner_name: string
           plan: Database["public"]["Enums"]["plan_tier"]
           plan_active_until: string | null
           province: string
           rejection_reason: string | null
+          social_facebook: string | null
+          social_instagram: string | null
+          social_tiktok: string | null
           status: Database["public"]["Enums"]["vendor_status"]
           updated_at: string
           verified: boolean
@@ -537,6 +542,7 @@ export type Database = {
         Insert: {
           ai_review_notes?: string | null
           ai_risk_score?: number | null
+          application_images?: string[]
           business_description: string
           business_name: string
           category: string
@@ -547,12 +553,16 @@ export type Database = {
           id: string
           is_formal_business?: boolean
           is_official?: boolean
+          legal_name?: string | null
           logo_url?: string | null
           owner_name: string
           plan?: Database["public"]["Enums"]["plan_tier"]
           plan_active_until?: string | null
           province: string
           rejection_reason?: string | null
+          social_facebook?: string | null
+          social_instagram?: string | null
+          social_tiktok?: string | null
           status?: Database["public"]["Enums"]["vendor_status"]
           updated_at?: string
           verified?: boolean
@@ -562,6 +572,7 @@ export type Database = {
         Update: {
           ai_review_notes?: string | null
           ai_risk_score?: number | null
+          application_images?: string[]
           business_description?: string
           business_name?: string
           category?: string
@@ -572,12 +583,16 @@ export type Database = {
           id?: string
           is_formal_business?: boolean
           is_official?: boolean
+          legal_name?: string | null
           logo_url?: string | null
           owner_name?: string
           plan?: Database["public"]["Enums"]["plan_tier"]
           plan_active_until?: string | null
           province?: string
           rejection_reason?: string | null
+          social_facebook?: string | null
+          social_instagram?: string | null
+          social_tiktok?: string | null
           status?: Database["public"]["Enums"]["vendor_status"]
           updated_at?: string
           verified?: boolean
@@ -585,6 +600,71 @@ export type Database = {
           whatsapp_number?: string
         }
         Relationships: []
+      }
+      verification_requests: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          id: string
+          legal_name: string
+          note: string
+          proof_images: string[]
+          reviewed_by: string | null
+          selling_channel: string
+          selling_since_months: number
+          social_facebook: string | null
+          social_instagram: string | null
+          social_tiktok: string | null
+          status: string
+          updated_at: string
+          vendor_id: string
+          website_url: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          id?: string
+          legal_name: string
+          note?: string
+          proof_images?: string[]
+          reviewed_by?: string | null
+          selling_channel?: string
+          selling_since_months: number
+          social_facebook?: string | null
+          social_instagram?: string | null
+          social_tiktok?: string | null
+          status?: string
+          updated_at?: string
+          vendor_id: string
+          website_url?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          id?: string
+          legal_name?: string
+          note?: string
+          proof_images?: string[]
+          reviewed_by?: string | null
+          selling_channel?: string
+          selling_since_months?: number
+          social_facebook?: string | null
+          social_instagram?: string | null
+          social_tiktok?: string | null
+          status?: string
+          updated_at?: string
+          vendor_id?: string
+          website_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verification_requests_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

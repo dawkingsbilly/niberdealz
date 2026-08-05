@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
-import { MapPin, BadgeCheck, Star, Crown } from "lucide-react";
+import { Star } from "lucide-react";
+
 
 export interface ProductCardData {
   id: string;
@@ -42,11 +43,6 @@ export function ProductCard({ p }: { p: ProductCardData }) {
             -{discount}% SALE
           </span>
         )}
-        {p.vendors?.is_official && (
-          <span className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-md bg-foreground text-background text-[10px] font-bold uppercase tracking-wider px-2 py-1">
-            <Crown className="h-3 w-3" />Official
-          </span>
-        )}
         {soldOut && (
           <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
             <span className="rounded-full bg-destructive text-destructive-foreground text-xs font-bold uppercase tracking-wider px-3 py-1">
@@ -83,15 +79,6 @@ export function ProductCard({ p }: { p: ProductCardData }) {
           )}
         </div>
 
-        {p.vendors && (
-          <div className="mt-3 pt-3 border-t border-border/60 text-xs text-muted-foreground flex items-center gap-1.5 min-w-0">
-            <span className="truncate inline-flex items-center gap-1">
-              {p.vendors.business_name}
-              {p.vendors.verified && <BadgeCheck className="h-3.5 w-3.5 text-sky-500 shrink-0" />}
-            </span>
-            {p.vendors.city && (<><span>·</span><MapPin className="h-3 w-3" /><span className="truncate">{p.vendors.city}</span></>)}
-          </div>
-        )}
       </div>
     </Link>
   );

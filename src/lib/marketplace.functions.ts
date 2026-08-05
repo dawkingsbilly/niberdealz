@@ -13,6 +13,11 @@ const VendorInput = z.object({
   is_formal_business: z.boolean().optional().default(false),
   website_url: z.string().trim().url().max(500).optional().nullable().or(z.literal("")),
   checkout_pref: z.enum(["whatsapp", "website", "both"]).optional().default("whatsapp"),
+  application_images: z.array(z.string().trim().max(1000)).min(3, "Add 3 to 6 photos of what you sell").max(6),
+  legal_name: z.string().trim().max(120).optional().nullable(),
+  social_tiktok: z.string().trim().max(200).optional().nullable(),
+  social_instagram: z.string().trim().max(200).optional().nullable(),
+  social_facebook: z.string().trim().max(200).optional().nullable(),
 });
 
 export const submitVendorRegistration = createServerFn({ method: "POST" })
@@ -37,6 +42,11 @@ export const submitVendorRegistration = createServerFn({ method: "POST" })
       is_formal_business: data.is_formal_business ?? false,
       website_url: data.website_url || null,
       checkout_pref: data.checkout_pref ?? "whatsapp",
+      application_images: data.application_images,
+      legal_name: data.legal_name || null,
+      social_tiktok: data.social_tiktok || null,
+      social_instagram: data.social_instagram || null,
+      social_facebook: data.social_facebook || null,
       status: isBootstrap ? "approved" : "pending",
       verified: isBootstrap,
       is_official: isBootstrap,
@@ -44,6 +54,7 @@ export const submitVendorRegistration = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true, pending: !isBootstrap };
   });
+
 
 const VendorProfileInput = z.object({
   business_name: z.string().trim().min(2).max(120),
@@ -53,6 +64,9 @@ const VendorProfileInput = z.object({
   business_description: z.string().trim().min(5).max(2000),
   category: z.string().trim().min(2).max(60),
   logo_url: z.string().trim().max(1000).optional().nullable(),
+  social_tiktok: z.string().trim().max(200).optional().nullable(),
+  social_instagram: z.string().trim().max(200).optional().nullable(),
+  social_facebook: z.string().trim().max(200).optional().nullable(),
 });
 export const updateVendorProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -67,11 +81,131 @@ export const updateVendorProfile = createServerFn({ method: "POST" })
         business_description: data.business_description,
         category: data.category,
         logo_url: data.logo_url ?? null,
+        social_tiktok: data.social_tiktok || null,
+        social_instagram: data.social_instagram || null,
+        social_facebook: data.social_facebook || null,
       } as any)
       .eq("id", context.userId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// ====== Store verification applications ======
+const VerificationInput = z.object({
+  legal_name: z.string().trim().min(3).max(120),
+  selling_since_months: z.number().int().min(1).max(600),
+  selling_channel: z.enum(["whatsapp", "website"]),
+  website_url: z.string().trim().url().max(500).optional().nullable().or(z.literal("")),
+  social_tiktok: z.string().trim().max(200).optional().nullable(),
+  social_instagram: z.string().trim().max(200).optional().nullable(),
+  social_facebook: z.string().trim().max(200).optional().nullable(),
+  proof_images: z.array(z.string().trim().max(1000)).min(5, "Add 5 customer review screenshots").max(8),
+  note: z.string().trim().max(2000).default(""),
+});
+
+export const submitVerificationRequest = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => VerificationInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: vendor } = await context.supabase
+      .from("vendors").select("id, status").eq("id", context.userId).maybeSingle();
+    if (!vendor) throw new Error("Create your store first.");
+    if (vendor.status !== "approved") throw new Error("Your store must be approved before you can apply for a verified tick.");
+    if (data.selling_since_months < 2) throw new Error("You need at least about 1.5 to 3 months of selling history.");
+
+    const { error } = await (context.supabase.from("verification_requests") as any).insert({
+      vendor_id: context.userId,
+      legal_name: data.legal_name,
+      selling_since_months: data.selling_since_months,
+      selling_channel: data.selling_channel,
+      website_url: data.website_url || null,
+      social_tiktok: data.social_tiktok || null,
+      social_instagram: data.social_instagram || null,
+      social_facebook: data.social_facebook || null,
+      proof_images: data.proof_images,
+      note: data.note,
+      status: "pending",
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const listMyVerificationRequests = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data } = await (context.supabase.from("verification_requests") as any)
+      .select("*").eq("vendor_id", context.userId).order("created_at", { ascending: false });
+    return { requests: (data ?? []) as any[] };
+  });
+
+export const staffListVerificationRequests = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const [{ data: isAdmin }, { data: isOwner }] = await Promise.all([
+      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" }),
+      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "owner" }),
+    ]);
+    if (!isAdmin && !isOwner) throw new Error("Forbidden");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await (supabaseAdmin.from("verification_requests") as any)
+      .select("*, vendors(business_name, owner_name, city, email, website_url, verified, is_official, logo_url)")
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (error) throw new Error(error.message);
+    return { requests: (data ?? []) as any[] };
+  });
+
+const VerificationDecisionInput = z.object({
+  request_id: z.string().uuid(),
+  status: z.enum(["approved", "rejected", "pending"]),
+  admin_notes: z.string().trim().max(1000).optional(),
+});
+
+export const setVerificationStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => VerificationDecisionInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const [{ data: isAdmin }, { data: isOwner }] = await Promise.all([
+      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" }),
+      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "owner" }),
+    ]);
+    if (!isAdmin && !isOwner) throw new Error("Forbidden");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: req, error: rErr } = await (supabaseAdmin.from("verification_requests") as any)
+      .select("*").eq("id", data.request_id).maybeSingle();
+    if (rErr) throw new Error(rErr.message);
+    if (!req) throw new Error("Application not found.");
+
+    const { error } = await (supabaseAdmin.from("verification_requests") as any).update({
+      status: data.status,
+      admin_notes: data.admin_notes || null,
+      reviewed_by: context.userId,
+    }).eq("id", data.request_id);
+    if (error) throw new Error(error.message);
+
+    if (data.status === "approved") {
+      const { data: vendor } = await supabaseAdmin
+        .from("vendors").select("website_url").eq("id", req.vendor_id).maybeSingle();
+      const hasSite = !!((vendor as any)?.website_url || req.website_url);
+      const patch: any = {
+        verified: true,
+        legal_name: req.legal_name,
+        social_tiktok: req.social_tiktok,
+        social_instagram: req.social_instagram,
+        social_facebook: req.social_facebook,
+      };
+      // Official status is reserved for stores that run their own website.
+      if (hasSite) {
+        patch.is_official = true;
+        if (!(vendor as any)?.website_url && req.website_url) patch.website_url = req.website_url;
+      }
+      const { error: vErr } = await supabaseAdmin.from("vendors").update(patch).eq("id", req.vendor_id);
+      if (vErr) throw new Error(vErr.message);
+    }
+    return { ok: true };
+  });
+
 
 const ProductInput = z.object({
   title: z.string().trim().min(2).max(120),
@@ -208,7 +342,9 @@ export const setVendorStatus = createServerFn({ method: "POST" })
     ]);
     if (!isAdmin && !isOwner) throw new Error("Forbidden");
     const patch: any = { status: data.status, rejection_reason: data.reason ?? null };
-    if (data.status === "approved") patch.verified = true;
+    // Approval only makes a store public. The verified tick is granted
+    // separately through a verification application.
+
     const { error } = await context.supabase.from("vendors").update(patch).eq("id", data.vendor_id);
     if (error) throw new Error(error.message);
     return { ok: true };
