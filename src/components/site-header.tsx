@@ -141,6 +141,11 @@ export function SiteHeader() {
 
               <nav className="mt-4 flex flex-col gap-1">
                 <MenuLink to="/" icon={Home} label="Browse" />
+                <SheetClose asChild>
+                  <Link to="/" hash="stores" className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-foreground/80 hover:bg-accent hover:text-foreground transition">
+                    <Store className="h-4 w-4" />Stores on {BRAND}
+                  </Link>
+                </SheetClose>
                 <MenuLink to="/cart" icon={ShoppingCart} label="Your cart" />
                 <MenuLink to="/safety" icon={ShieldAlert} label="Safety guidelines" />
                 <MenuLink to="/contact" icon={Mail} label="Contact us" />
