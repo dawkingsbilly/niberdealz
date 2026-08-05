@@ -43,11 +43,6 @@ export function ProductCard({ p }: { p: ProductCardData }) {
             -{discount}% SALE
           </span>
         )}
-        {p.vendors?.is_official && (
-          <span className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-md bg-foreground text-background text-[10px] font-bold uppercase tracking-wider px-2 py-1">
-            <Crown className="h-3 w-3" />Official
-          </span>
-        )}
         {soldOut && (
           <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
             <span className="rounded-full bg-destructive text-destructive-foreground text-xs font-bold uppercase tracking-wider px-3 py-1">
