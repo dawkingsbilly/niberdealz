@@ -12,15 +12,18 @@ import { Input } from "@/components/ui/input";
 import { CATEGORIES, SITE_NAME, CONTACT_EMAIL } from "@/lib/constants";
 
 
-import img1 from "@/assets/slides/clothing.jpg.asset.json";
-import img2 from "@/assets/slides/electronics.jpg.asset.json";
-import img3 from "@/assets/slides/sneakers.jpg.asset.json";
-import img4 from "@/assets/slides/accessories.jpg.asset.json";
-import img5 from "@/assets/slides/furniture.jpg.asset.json";
-import img6 from "@/assets/slides/textbooks.jpg.asset.json";
-import img7 from "@/assets/slides/handoff.jpg.asset.json";
+import shoe1 from "@/assets/IMG-20260604-WA0140.jpg.asset.json";
+import shoe2 from "@/assets/IMG-20260606-WA0028.jpg.asset.json";
+import shoe3 from "@/assets/IMG-20260606-WA0041.jpg.asset.json";
+import shoe4 from "@/assets/IMG-20260606-WA0047.jpg.asset.json";
+import shoe5 from "@/assets/IMG-20260606-WA0082.jpg.asset.json";
+import shoe6 from "@/assets/IMG-20260608-WA0019.jpg.asset.json";
+import shoe7 from "@/assets/IMG-20260608-WA0020.jpg.asset.json";
 
-const SLIDES = [img1, img2, img3, img4, img5, img6, img7];
+/** Real product photos from stores on the marketplace (used until live listings load). */
+const FALLBACK_SLIDES = [shoe1, shoe2, shoe3, shoe4, shoe5, shoe6, shoe7];
+const img1 = shoe1;
+
 
 export const Route = createFileRoute("/")({
   validateSearch: z.object({ q: z.string().optional() }),
@@ -79,10 +82,7 @@ function Home() {
   useEffect(() => { setQ(qParam ?? ""); }, [qParam]);
 
 
-  useEffect(() => {
-    const t = setInterval(() => setSlide((s) => (s + 1) % SLIDES.length), 4000);
-    return () => clearInterval(t);
-  }, []);
+
 
   const { data, isLoading } = useQuery({
     queryKey: ["homefeed", q, category],
@@ -195,6 +195,19 @@ function Home() {
     },
   });
 
+  // Hero slides use real photos of products listed on the marketplace.
+  const SLIDES = useMemo(() => {
+    const urls = (products as any[]).map((p) => p.image_url).filter(Boolean) as string[];
+    const uniq = Array.from(new Set(urls)).slice(0, 7);
+    return uniq.length >= 3 ? uniq : FALLBACK_SLIDES.map((a) => a.url);
+  }, [products]);
+
+  useEffect(() => {
+    setSlide(0);
+    const t = setInterval(() => setSlide((s) => (s + 1) % SLIDES.length), 4000);
+    return () => clearInterval(t);
+  }, [SLIDES]);
+
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -202,12 +215,12 @@ function Home() {
 
       <section className="container mx-auto px-4 pt-4 pb-6">
         <div className="relative overflow-hidden rounded-2xl border border-border aspect-video">
-          {SLIDES.map((img, i) => (
+          {SLIDES.map((src, i) => (
             i === 0 ? (
               <img
-                key={i}
-                src={img.url}
-                alt=""
+                key={src}
+                src={src}
+                alt="Product listed on Niberdealz"
                 width={1600}
                 height={900}
                 fetchPriority="high"
@@ -217,9 +230,9 @@ function Home() {
               />
             ) : (
               <div
-                key={i}
+                key={src}
                 className="absolute inset-0 transition-opacity duration-1000"
-                style={{ opacity: i === slide ? 1 : 0, backgroundImage: `url(${img.url})`, backgroundSize: "cover", backgroundPosition: "center" }}
+                style={{ opacity: i === slide ? 1 : 0, backgroundImage: `url(${src})`, backgroundSize: "cover", backgroundPosition: "center" }}
               />
             )
           ))}
@@ -250,23 +263,6 @@ function Home() {
       </section>
 
 
-      <section className="border-y border-border bg-background">
-        <div className="container mx-auto px-4 py-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          {[
-            { Icon: BadgeCheck, t: "Verified sellers", s: "Every store reviewed by our team" },
-            { Icon: ShieldCheck, t: "Safe meet ups", s: "Inspect before you pay" },
-            { Icon: Handshake, t: "Zero commission", s: "Sellers keep everything they earn" },
-            { Icon: MessageCircle, t: "Direct on WhatsApp", s: "No middleman, no waiting" },
-          ].map(({ Icon, t, s }) => (
-            <div key={t} className="flex items-start gap-2.5">
-              <Icon className="h-5 w-5 text-[color:var(--deal)] mt-0.5 shrink-0" />
-              <div className="min-w-0"><div className="font-semibold leading-tight">{t}</div><div className="text-xs text-muted-foreground">{s}</div></div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-
       {flashSales.length > 0 && (
         <section className="container mx-auto px-4 py-8">
           <div className="mb-4 flex items-end justify-between gap-4">
@@ -283,39 +279,6 @@ function Home() {
         </section>
       )}
 
-      {stores.length > 0 && (
-        <section className="container mx-auto px-4 py-8">
-          <div className="mb-4">
-            <h2 className="font-display text-2xl md:text-3xl font-bold flex items-center gap-2">
-              <Store className="h-6 w-6 text-[color:var(--deal)]" />Stores on {SITE_NAME}
-            </h2>
-            <p className="text-muted-foreground text-sm">Browse a store and see everything they sell.</p>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {(stores as any[]).map((s) => (
-              <Link
-                key={s.id}
-                to="/vendor/$id"
-                params={{ id: s.id }}
-                className="rounded-2xl bg-card border border-border p-4 shadow-[var(--shadow-card)] hover:border-foreground/30 transition flex items-center gap-3"
-              >
-                <div className="h-12 w-12 rounded-xl overflow-hidden bg-muted flex items-center justify-center shrink-0">
-                  {s.logo_url ? <img src={s.logo_url} alt="" className="h-full w-full object-cover" /> : <Store className="h-5 w-5 text-muted-foreground" />}
-                </div>
-                <div className="min-w-0">
-                  <div className="font-semibold truncate flex items-center gap-1">
-                    {s.business_name}
-                    {s.verified && <BadgeCheck className="h-4 w-4 text-sky-500 shrink-0" />}
-                    {s.is_official && <Crown className="h-3.5 w-3.5 shrink-0" />}
-                    {!s.is_official && isPromoActive(s) && <span className="rounded-full bg-[var(--deal)] text-[color:var(--deal-foreground)] text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5">Boosted</span>}
-                  </div>
-                  <div className="text-xs text-muted-foreground truncate">{s.city} {s.category ? `\u00b7 ${s.category}` : ""}</div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
 
       <section className="border-y border-border bg-card/60">
         <div className="container mx-auto px-4 py-4 flex gap-2 overflow-x-auto">
@@ -383,6 +346,41 @@ function Home() {
         </div>
       </section>
 
+      {stores.length > 0 && (
+        <section id="stores" className="container mx-auto px-4 py-12 scroll-mt-20">
+          <div className="mb-5">
+            <h2 className="font-display text-2xl md:text-3xl font-bold flex items-center gap-2">
+              <Store className="h-6 w-6 text-[color:var(--deal)]" />Stores on {SITE_NAME}
+            </h2>
+            <p className="text-muted-foreground text-sm">Browse a store and see everything they sell.</p>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {(stores as any[]).map((s) => (
+              <Link
+                key={s.id}
+                to="/vendor/$id"
+                params={{ id: s.id }}
+                className="rounded-lg bg-card border border-border p-4 hover:border-foreground/40 transition flex items-center gap-3"
+              >
+                <div className="h-12 w-12 rounded-md overflow-hidden bg-muted flex items-center justify-center shrink-0">
+                  {s.logo_url ? <img src={s.logo_url} alt="" className="h-full w-full object-cover" /> : <Store className="h-5 w-5 text-muted-foreground" />}
+                </div>
+                <div className="min-w-0">
+                  <div className="font-semibold truncate flex items-center gap-1">
+                    {s.business_name}
+                    {s.verified && <BadgeCheck className="h-4 w-4 text-sky-500 shrink-0" />}
+                    {s.is_official && <Crown className="h-3.5 w-3.5 shrink-0" />}
+                    {!s.is_official && isPromoActive(s) && <span className="rounded-full bg-[var(--deal)] text-[color:var(--deal-foreground)] text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5">Boosted</span>}
+                  </div>
+                  <div className="text-xs text-muted-foreground truncate">{s.city} {s.category ? `\u00b7 ${s.category}` : ""}</div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+
       <section className="container mx-auto px-4 py-14">
         <div className="rounded-3xl bg-gradient-to-br from-foreground to-foreground/80 text-background p-8 md:p-12 grid md:grid-cols-[1fr_auto] items-center gap-6 shadow-[var(--shadow-card)]">
           <div>
@@ -412,6 +410,23 @@ function Home() {
           ))}
         </div>
       </section>
+
+      <section className="border-t border-border bg-secondary/40">
+        <div className="container mx-auto px-4 py-8 grid grid-cols-2 md:grid-cols-4 gap-5 text-sm">
+          {[
+            { Icon: BadgeCheck, t: "Verified sellers", s: "Every store reviewed by our team" },
+            { Icon: ShieldCheck, t: "Safe meet ups", s: "Inspect before you pay" },
+            { Icon: Handshake, t: "Zero commission", s: "Sellers keep everything they earn" },
+            { Icon: MessageCircle, t: "Direct on WhatsApp", s: "No middleman, no waiting" },
+          ].map(({ Icon, t, s }) => (
+            <div key={t} className="flex items-start gap-2.5">
+              <Icon className="h-5 w-5 text-[color:var(--deal)] mt-0.5 shrink-0" />
+              <div className="min-w-0"><div className="font-semibold leading-tight">{t}</div><div className="text-xs text-muted-foreground">{s}</div></div>
+            </div>
+          ))}
+        </div>
+      </section>
+
 
       <SiteFooter />
     </div>
