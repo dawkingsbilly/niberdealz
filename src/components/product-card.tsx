@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
-import { MapPin, BadgeCheck, Star, Crown } from "lucide-react";
+import { Star } from "lucide-react";
+
 
 export interface ProductCardData {
   id: string;
