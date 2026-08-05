@@ -13,6 +13,11 @@ const VendorInput = z.object({
   is_formal_business: z.boolean().optional().default(false),
   website_url: z.string().trim().url().max(500).optional().nullable().or(z.literal("")),
   checkout_pref: z.enum(["whatsapp", "website", "both"]).optional().default("whatsapp"),
+  application_images: z.array(z.string().trim().max(1000)).min(3, "Add 3 to 6 photos of what you sell").max(6),
+  legal_name: z.string().trim().max(120).optional().nullable(),
+  social_tiktok: z.string().trim().max(200).optional().nullable(),
+  social_instagram: z.string().trim().max(200).optional().nullable(),
+  social_facebook: z.string().trim().max(200).optional().nullable(),
 });
 
 export const submitVendorRegistration = createServerFn({ method: "POST" })
@@ -37,6 +42,11 @@ export const submitVendorRegistration = createServerFn({ method: "POST" })
       is_formal_business: data.is_formal_business ?? false,
       website_url: data.website_url || null,
       checkout_pref: data.checkout_pref ?? "whatsapp",
+      application_images: data.application_images,
+      legal_name: data.legal_name || null,
+      social_tiktok: data.social_tiktok || null,
+      social_instagram: data.social_instagram || null,
+      social_facebook: data.social_facebook || null,
       status: isBootstrap ? "approved" : "pending",
       verified: isBootstrap,
       is_official: isBootstrap,
@@ -44,6 +54,7 @@ export const submitVendorRegistration = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true, pending: !isBootstrap };
   });
+
 
 const VendorProfileInput = z.object({
   business_name: z.string().trim().min(2).max(120),
