@@ -346,6 +346,41 @@ function Home() {
         </div>
       </section>
 
+      {stores.length > 0 && (
+        <section id="stores" className="container mx-auto px-4 py-12 scroll-mt-20">
+          <div className="mb-5">
+            <h2 className="font-display text-2xl md:text-3xl font-bold flex items-center gap-2">
+              <Store className="h-6 w-6 text-[color:var(--deal)]" />Stores on {SITE_NAME}
+            </h2>
+            <p className="text-muted-foreground text-sm">Browse a store and see everything they sell.</p>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {(stores as any[]).map((s) => (
+              <Link
+                key={s.id}
+                to="/vendor/$id"
+                params={{ id: s.id }}
+                className="rounded-lg bg-card border border-border p-4 hover:border-foreground/40 transition flex items-center gap-3"
+              >
+                <div className="h-12 w-12 rounded-md overflow-hidden bg-muted flex items-center justify-center shrink-0">
+                  {s.logo_url ? <img src={s.logo_url} alt="" className="h-full w-full object-cover" /> : <Store className="h-5 w-5 text-muted-foreground" />}
+                </div>
+                <div className="min-w-0">
+                  <div className="font-semibold truncate flex items-center gap-1">
+                    {s.business_name}
+                    {s.verified && <BadgeCheck className="h-4 w-4 text-sky-500 shrink-0" />}
+                    {s.is_official && <Crown className="h-3.5 w-3.5 shrink-0" />}
+                    {!s.is_official && isPromoActive(s) && <span className="rounded-full bg-[var(--deal)] text-[color:var(--deal-foreground)] text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5">Boosted</span>}
+                  </div>
+                  <div className="text-xs text-muted-foreground truncate">{s.city} {s.category ? `\u00b7 ${s.category}` : ""}</div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+
       <section className="container mx-auto px-4 py-14">
         <div className="rounded-3xl bg-gradient-to-br from-foreground to-foreground/80 text-background p-8 md:p-12 grid md:grid-cols-[1fr_auto] items-center gap-6 shadow-[var(--shadow-card)]">
           <div>
