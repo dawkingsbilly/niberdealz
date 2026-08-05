@@ -157,6 +157,41 @@ function RegisterShop() {
               <Textarea rows={4} value={form.business_description} onChange={(e) => update("business_description", e.target.value)} placeholder="A line or two about your store." />
             </div>
 
+            <div className="space-y-1.5">
+              <Label>Photos of what you sell * (3 to 6)</Label>
+              <p className="text-xs text-muted-foreground">The CEO reviews these photos before your store goes live.</p>
+              {appFiles.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {appFiles.map((f, i) => (
+                    <div key={i} className="relative h-20 w-20 rounded-lg overflow-hidden border">
+                      <img src={URL.createObjectURL(f)} alt="" className="h-full w-full object-cover" />
+                      <button type="button" onClick={() => setAppFiles(appFiles.filter((_, j) => j !== i))} className="absolute top-0 right-0 bg-black/70 text-white text-[10px] px-1">x</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <Input type="file" accept="image/*" multiple onChange={(e) => {
+                const picked = Array.from(e.target.files ?? []);
+                setAppFiles([...appFiles, ...picked].slice(0, 6));
+                e.target.value = "";
+              }} />
+              <p className="text-xs text-muted-foreground">{appFiles.length}/6 photos</p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Your legal name (optional, needed later for verification)</Label>
+              <Input value={form.legal_name} onChange={(e) => update("legal_name", e.target.value)} placeholder="As it appears on your ID" />
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="space-y-1.5"><Label>TikTok</Label><Input value={form.social_tiktok} onChange={(e) => update("social_tiktok", e.target.value)} placeholder="@yourhandle" /></div>
+              <div className="space-y-1.5"><Label>Instagram</Label><Input value={form.social_instagram} onChange={(e) => update("social_instagram", e.target.value)} placeholder="@yourhandle" /></div>
+              <div className="space-y-1.5"><Label>Facebook</Label><Input value={form.social_facebook} onChange={(e) => update("social_facebook", e.target.value)} placeholder="yourpage" /></div>
+            </div>
+            <p className="text-xs text-muted-foreground">Buyers see these links on your store panel under every listing.</p>
+
+
+
             <div className="rounded-lg border border-border bg-secondary/40 p-4 space-y-3">
               <label className="flex items-start gap-2 cursor-pointer">
                 <input type="checkbox" className="mt-1" checked={form.is_formal_business} onChange={(e) => update("is_formal_business", e.target.checked)} />
