@@ -32,13 +32,19 @@ function RegisterShop() {
     is_formal_business: false,
     website_url: "",
     checkout_pref: "whatsapp" as "whatsapp" | "website" | "both",
+    legal_name: "",
+    social_tiktok: "",
+    social_instagram: "",
+    social_facebook: "",
   });
   const [sellerType, setSellerType] = useState<"student" | "business">("student");
   const [studentEmail, setStudentEmail] = useState("");
   const [agree, setAgree] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [appFiles, setAppFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasShop, setHasShop] = useState(false);
+
 
   useEffect(() => {
     if (!user) return;
