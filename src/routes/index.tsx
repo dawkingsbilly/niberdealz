@@ -82,10 +82,7 @@ function Home() {
   useEffect(() => { setQ(qParam ?? ""); }, [qParam]);
 
 
-  useEffect(() => {
-    const t = setInterval(() => setSlide((s) => (s + 1) % SLIDES.length), 4000);
-    return () => clearInterval(t);
-  }, []);
+
 
   const { data, isLoading } = useQuery({
     queryKey: ["homefeed", q, category],
