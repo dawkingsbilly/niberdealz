@@ -195,6 +195,19 @@ function Home() {
     },
   });
 
+  // Hero slides use real photos of products listed on the marketplace.
+  const SLIDES = useMemo(() => {
+    const urls = (products as any[]).map((p) => p.image_url).filter(Boolean) as string[];
+    const uniq = Array.from(new Set(urls)).slice(0, 7);
+    return uniq.length >= 3 ? uniq : FALLBACK_SLIDES.map((a) => a.url);
+  }, [products]);
+
+  useEffect(() => {
+    setSlide(0);
+    const t = setInterval(() => setSlide((s) => (s + 1) % SLIDES.length), 4000);
+    return () => clearInterval(t);
+  }, [SLIDES]);
+
 
   return (
     <div className="min-h-screen flex flex-col">
