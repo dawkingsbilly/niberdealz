@@ -215,12 +215,12 @@ function Home() {
 
       <section className="container mx-auto px-4 pt-4 pb-6">
         <div className="relative overflow-hidden rounded-2xl border border-border aspect-video">
-          {SLIDES.map((img, i) => (
+          {SLIDES.map((src, i) => (
             i === 0 ? (
               <img
-                key={i}
-                src={img.url}
-                alt=""
+                key={src}
+                src={src}
+                alt="Product listed on Niberdealz"
                 width={1600}
                 height={900}
                 fetchPriority="high"
@@ -230,9 +230,9 @@ function Home() {
               />
             ) : (
               <div
-                key={i}
+                key={src}
                 className="absolute inset-0 transition-opacity duration-1000"
-                style={{ opacity: i === slide ? 1 : 0, backgroundImage: `url(${img.url})`, backgroundSize: "cover", backgroundPosition: "center" }}
+                style={{ opacity: i === slide ? 1 : 0, backgroundImage: `url(${src})`, backgroundSize: "cover", backgroundPosition: "center" }}
               />
             )
           ))}
