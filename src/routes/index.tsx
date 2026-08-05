@@ -263,23 +263,6 @@ function Home() {
       </section>
 
 
-      <section className="border-y border-border bg-background">
-        <div className="container mx-auto px-4 py-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          {[
-            { Icon: BadgeCheck, t: "Verified sellers", s: "Every store reviewed by our team" },
-            { Icon: ShieldCheck, t: "Safe meet ups", s: "Inspect before you pay" },
-            { Icon: Handshake, t: "Zero commission", s: "Sellers keep everything they earn" },
-            { Icon: MessageCircle, t: "Direct on WhatsApp", s: "No middleman, no waiting" },
-          ].map(({ Icon, t, s }) => (
-            <div key={t} className="flex items-start gap-2.5">
-              <Icon className="h-5 w-5 text-[color:var(--deal)] mt-0.5 shrink-0" />
-              <div className="min-w-0"><div className="font-semibold leading-tight">{t}</div><div className="text-xs text-muted-foreground">{s}</div></div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-
       {flashSales.length > 0 && (
         <section className="container mx-auto px-4 py-8">
           <div className="mb-4 flex items-end justify-between gap-4">
@@ -296,39 +279,6 @@ function Home() {
         </section>
       )}
 
-      {stores.length > 0 && (
-        <section className="container mx-auto px-4 py-8">
-          <div className="mb-4">
-            <h2 className="font-display text-2xl md:text-3xl font-bold flex items-center gap-2">
-              <Store className="h-6 w-6 text-[color:var(--deal)]" />Stores on {SITE_NAME}
-            </h2>
-            <p className="text-muted-foreground text-sm">Browse a store and see everything they sell.</p>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {(stores as any[]).map((s) => (
-              <Link
-                key={s.id}
-                to="/vendor/$id"
-                params={{ id: s.id }}
-                className="rounded-2xl bg-card border border-border p-4 shadow-[var(--shadow-card)] hover:border-foreground/30 transition flex items-center gap-3"
-              >
-                <div className="h-12 w-12 rounded-xl overflow-hidden bg-muted flex items-center justify-center shrink-0">
-                  {s.logo_url ? <img src={s.logo_url} alt="" className="h-full w-full object-cover" /> : <Store className="h-5 w-5 text-muted-foreground" />}
-                </div>
-                <div className="min-w-0">
-                  <div className="font-semibold truncate flex items-center gap-1">
-                    {s.business_name}
-                    {s.verified && <BadgeCheck className="h-4 w-4 text-sky-500 shrink-0" />}
-                    {s.is_official && <Crown className="h-3.5 w-3.5 shrink-0" />}
-                    {!s.is_official && isPromoActive(s) && <span className="rounded-full bg-[var(--deal)] text-[color:var(--deal-foreground)] text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5">Boosted</span>}
-                  </div>
-                  <div className="text-xs text-muted-foreground truncate">{s.city} {s.category ? `\u00b7 ${s.category}` : ""}</div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
 
       <section className="border-y border-border bg-card/60">
         <div className="container mx-auto px-4 py-4 flex gap-2 overflow-x-auto">
