@@ -79,15 +79,6 @@ export function ProductCard({ p }: { p: ProductCardData }) {
           )}
         </div>
 
-        {p.vendors && (
-          <div className="mt-3 pt-3 border-t border-border/60 text-xs text-muted-foreground flex items-center gap-1.5 min-w-0">
-            <span className="truncate inline-flex items-center gap-1">
-              {p.vendors.business_name}
-              {p.vendors.verified && <BadgeCheck className="h-3.5 w-3.5 text-sky-500 shrink-0" />}
-            </span>
-            {p.vendors.city && (<><span>·</span><MapPin className="h-3 w-3" /><span className="truncate">{p.vendors.city}</span></>)}
-          </div>
-        )}
       </div>
     </Link>
   );
