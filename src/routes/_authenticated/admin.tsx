@@ -39,8 +39,8 @@ function Admin() {
   }
 
   const tabs = isOwner
-    ? (["overview", "approvals", "listings", "stores", "payments", "sales", "themes", "broadcasts", "reports", "users", "admins"] as const)
-    : (["overview", "approvals", "listings", "payments", "reports"] as const);
+    ? (["overview", "approvals", "verification", "listings", "stores", "payments", "sales", "themes", "broadcasts", "reports", "users", "admins"] as const)
+    : (["overview", "approvals", "verification", "listings", "payments", "reports"] as const);
 
   return (
     <div className="min-h-screen flex flex-col">
