@@ -15,6 +15,7 @@ import { SiteHeader, SiteFooter } from "@/components/site-header";
 import { adminDeleteProduct, ownerDeleteVendor, ownerListUsers, promoteToRole, sendVendorWarning, setReportStatus, ownerStoreDetail, setVendorStatus, createSaleCampaign, deleteSaleCampaign, createBroadcast, listBroadcasts } from "@/lib/marketplace.functions";
 import { ThemesTab } from "@/components/admin/themes-tab";
 import { PaymentsTab } from "@/components/admin/payments-tab";
+import { VerificationTab } from "@/components/admin/verification-tab";
 
 export const Route = createFileRoute("/_authenticated/admin")({ component: Admin });
 
