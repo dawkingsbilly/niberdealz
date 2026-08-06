@@ -29,6 +29,8 @@ function CartPage() {
   const { user } = useAuth();
   const { items, count, total, setQty, setComment, remove, clear } = useCart();
   const [buyerName, setBuyerName] = useState("");
+  const [address, setAddress] = useState("");
+  const [tip, setTip] = useState("");
   const [note, setNote] = useState("");
   const [guestOk, setGuestOk] = useState(false);
   const [sent, setSent] = useState<string[]>([]);
