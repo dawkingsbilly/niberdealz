@@ -185,6 +185,14 @@ function CartPage() {
                   <Label htmlFor="buyerName">Your name</Label>
                   <Input id="buyerName" value={buyerName} onChange={(e) => setBuyerName(e.target.value)} placeholder="For example Thabo Sibanda" />
                 </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="tip">Tip for the seller (optional)</Label>
+                  <Input id="tip" type="number" min="0" step="1" value={tip} onChange={(e) => setTip(e.target.value)} placeholder="Leave blank to skip" />
+                </div>
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label htmlFor="address">Address or meetup spot</Label>
+                  <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Residence, campus gate, suburb or delivery address" />
+                </div>
                 <div className="space-y-1.5 sm:col-span-2">
                   <Label htmlFor="note">Comment or special request</Label>
                   <Textarea id="note" rows={3} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Where you would like to meet, delivery questions, anything else" />
