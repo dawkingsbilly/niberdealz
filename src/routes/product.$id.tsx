@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { buildWhatsAppMessage } from "@/lib/constants";
 import { addToCart } from "@/lib/cart";
+import { socialUrl, socialLabel } from "@/lib/socials";
 import { adminDeleteProduct, submitReport, submitReview } from "@/lib/marketplace.functions";
 
 
