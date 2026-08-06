@@ -15,13 +15,15 @@ import { SiteHeader, SiteFooter } from "@/components/site-header";
 import { adminDeleteProduct, ownerDeleteVendor, ownerListUsers, promoteToRole, sendVendorWarning, setReportStatus, ownerStoreDetail, setVendorStatus, createSaleCampaign, deleteSaleCampaign, createBroadcast, listBroadcasts } from "@/lib/marketplace.functions";
 import { ThemesTab } from "@/components/admin/themes-tab";
 import { PaymentsTab } from "@/components/admin/payments-tab";
+import { VerificationTab } from "@/components/admin/verification-tab";
+import { socialUrl } from "@/lib/socials";
 
 export const Route = createFileRoute("/_authenticated/admin")({ component: Admin });
 
 function Admin() {
   const { user, roles, isLoading } = useAuth();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<"overview" | "approvals" | "listings" | "stores" | "payments" | "sales" | "themes" | "broadcasts" | "reports" | "users" | "admins">("overview");
+  const [tab, setTab] = useState<"overview" | "approvals" | "verification" | "listings" | "stores" | "payments" | "sales" | "themes" | "broadcasts" | "reports" | "users" | "admins">("overview");
 
   const isAdmin = roles.includes("admin");
   const isOwner = roles.includes("owner");
@@ -38,8 +40,8 @@ function Admin() {
   }
 
   const tabs = isOwner
-    ? (["overview", "approvals", "listings", "stores", "payments", "sales", "themes", "broadcasts", "reports", "users", "admins"] as const)
-    : (["overview", "approvals", "listings", "payments", "reports"] as const);
+    ? (["overview", "approvals", "verification", "listings", "stores", "payments", "sales", "themes", "broadcasts", "reports", "users", "admins"] as const)
+    : (["overview", "approvals", "verification", "listings", "payments", "reports"] as const);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -69,6 +71,7 @@ function Admin() {
 
         {tab === "overview" && <OverviewTab />}
         {tab === "approvals" && <ApprovalsTab qc={qc} />}
+        {tab === "verification" && <VerificationTab />}
         {tab === "listings" && <ListingsTab qc={qc} />}
         {tab === "stores" && isOwner && <StoresTab qc={qc} />}
         {tab === "payments" && <PaymentsTab />}
@@ -529,6 +532,24 @@ function ApprovalsTab({ qc }: { qc: ReturnType<typeof useQueryClient> }) {
             <div className="font-semibold flex items-center gap-2">{v.business_name} <span className="text-xs text-muted-foreground font-normal">· {v.owner_name}</span></div>
             <div className="text-xs text-muted-foreground">{v.email} · {v.whatsapp_number} · {v.city} · {v.category}</div>
             <p className="text-sm mt-1 text-foreground/80">{v.business_description}</p>
+            {v.legal_name && <p className="text-xs text-muted-foreground mt-1">Legal name: {v.legal_name}</p>}
+            {(v.social_tiktok || v.social_instagram || v.social_facebook) && (
+              <div className="mt-1 flex flex-wrap gap-2 text-xs">
+                {([["tiktok", v.social_tiktok], ["instagram", v.social_instagram], ["facebook", v.social_facebook]] as const).map(([k, raw]) => {
+                  const url = socialUrl(k as any, raw);
+                  return url ? <a key={k} href={url} target="_blank" rel="noopener noreferrer" className="underline capitalize">{k}</a> : null;
+                })}
+              </div>
+            )}
+            {Array.isArray(v.application_images) && v.application_images.length > 0 && (
+              <div className="mt-2 flex gap-2 flex-wrap">
+                {v.application_images.map((img: string) => (
+                  <a key={img} href={img} target="_blank" rel="noopener noreferrer" className="h-20 w-20 rounded-lg overflow-hidden border block">
+                    <img src={img} alt="What this store sells" className="h-full w-full object-cover" />
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
           <div className="flex gap-2">
             <Button size="sm" variant="outline" onClick={() => decide(v.id, "rejected")}><X className="h-4 w-4 mr-1" />Decline</Button>

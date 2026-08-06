@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, MapPin, MessageCircle, Store, Trash2, Flag, Star, ShoppingCart } from "lucide-react";
+import { ArrowLeft, MapPin, MessageCircle, Store, Trash2, Flag, Star, ShoppingCart, BadgeCheck, Crown, Globe } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { SiteHeader, SiteFooter } from "@/components/site-header";
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { buildWhatsAppMessage } from "@/lib/constants";
 import { addToCart } from "@/lib/cart";
+import { socialUrl, socialLabel } from "@/lib/socials";
 import { adminDeleteProduct, submitReport, submitReview } from "@/lib/marketplace.functions";
 
 
@@ -114,7 +115,7 @@ function ProductDetail() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("id, title, description, price_zar, category, image_url, images, status, is_sold, size, color, checkout_url, vendor_id, vendors(id, business_name, owner_name, whatsapp_number, city, business_description, category, status, website_url, checkout_pref, is_formal_business)")
+        .select("id, title, description, price_zar, category, image_url, images, status, is_sold, size, color, checkout_url, vendor_id, vendors(id, business_name, owner_name, whatsapp_number, city, business_description, category, status, website_url, checkout_pref, is_formal_business, verified, is_official, logo_url, social_tiktok, social_instagram, social_facebook)")
         .eq("id", id).maybeSingle();
       if (error) throw error;
       if (!data || data.status !== "approved") throw notFound();
@@ -294,12 +295,46 @@ function ProductDetail() {
 
         {vendor && (
           <div className="rounded-2xl bg-card border border-border p-6 shadow-[var(--shadow-card)] mb-8">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">Sold by this store</p>
             <div className="flex items-start gap-4 flex-wrap">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--deal)]/10 text-[color:var(--deal)] shrink-0"><Store className="h-7 w-7" /></div>
+              <div className="h-14 w-14 rounded-2xl overflow-hidden bg-[var(--deal)]/10 text-[color:var(--deal)] shrink-0 flex items-center justify-center">
+                {vendor.logo_url ? <img src={vendor.logo_url} alt={`${vendor.business_name} logo`} className="h-full w-full object-cover" /> : <Store className="h-7 w-7" />}
+              </div>
               <div className="flex-1 min-w-0">
-                <Link to="/vendor/$id" params={{ id: vendor.id }} className="font-display text-xl font-bold hover:underline">{vendor.business_name}</Link>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Link to="/vendor/$id" params={{ id: vendor.id }} className="font-display text-xl font-bold hover:underline">{vendor.business_name}</Link>
+                  {vendor.verified && <span className="inline-flex items-center gap-1 text-xs font-semibold text-sky-600"><BadgeCheck className="h-4 w-4" />Verified</span>}
+                  {vendor.is_official && <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600"><Crown className="h-4 w-4" />Official store</span>}
+                </div>
                 <p className="text-sm text-muted-foreground flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" />{vendor.city}</p>
                 <p className="mt-2 text-sm text-foreground/80">{vendor.business_description}</p>
+
+                {(() => {
+                  const links = ([
+                    ["TikTok", socialUrl("tiktok", vendor.social_tiktok), vendor.social_tiktok],
+                    ["Instagram", socialUrl("instagram", vendor.social_instagram), vendor.social_instagram],
+                    ["Facebook", socialUrl("facebook", vendor.social_facebook), vendor.social_facebook],
+                  ] as [string, string | null, string | null][]).filter(([, url]) => !!url);
+                  if (links.length === 0 && !vendor.website_url) return null;
+                  return (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {links.map(([label, url, raw]) => (
+                        <a key={label} href={url!} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted">
+                          {label} {socialLabel(raw)}
+                        </a>
+                      ))}
+                      {vendor.website_url && (
+                        <a href={vendor.website_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted">
+                          <Globe className="h-3.5 w-3.5" />Website
+                        </a>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                <div className="mt-3">
+                  <Button asChild size="sm" variant="outline"><Link to="/vendor/$id" params={{ id: vendor.id }}>Visit store</Link></Button>
+                </div>
               </div>
             </div>
           </div>

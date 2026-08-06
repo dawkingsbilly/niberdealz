@@ -29,6 +29,8 @@ function CartPage() {
   const { user } = useAuth();
   const { items, count, total, setQty, setComment, remove, clear } = useCart();
   const [buyerName, setBuyerName] = useState("");
+  const [address, setAddress] = useState("");
+  const [tip, setTip] = useState("");
   const [note, setNote] = useState("");
   const [guestOk, setGuestOk] = useState(false);
   const [sent, setSent] = useState<string[]>([]);
@@ -55,7 +57,13 @@ function CartPage() {
       toast.error("This seller has no WhatsApp number on file.");
       return;
     }
-    const text = buildCartMessage({ buyerName: buyerName.trim(), items: list, note: note.trim() });
+    const text = buildCartMessage({
+      buyerName: buyerName.trim(),
+      items: list,
+      note: note.trim(),
+      address: address.trim(),
+      tip: tip === "" ? 0 : Number(tip),
+    });
     window.open(`https://wa.me/${number}?text=${encodeURIComponent(text)}`, "_blank", "noopener");
     list.forEach((i) => {
       supabase.from("product_events").insert({ product_id: i.product_id, vendor_id: i.vendor_id, event_type: "checkout" }).then(() => {});
@@ -176,6 +184,14 @@ function CartPage() {
                 <div className="space-y-1.5">
                   <Label htmlFor="buyerName">Your name</Label>
                   <Input id="buyerName" value={buyerName} onChange={(e) => setBuyerName(e.target.value)} placeholder="For example Thabo Sibanda" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="tip">Tip for the seller (optional)</Label>
+                  <Input id="tip" type="number" min="0" step="1" value={tip} onChange={(e) => setTip(e.target.value)} placeholder="Leave blank to skip" />
+                </div>
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label htmlFor="address">Address or meetup spot</Label>
+                  <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Residence, campus gate, suburb or delivery address" />
                 </div>
                 <div className="space-y-1.5 sm:col-span-2">
                   <Label htmlFor="note">Comment or special request</Label>
