@@ -114,7 +114,7 @@ function ProductDetail() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("id, title, description, price_zar, category, image_url, images, status, is_sold, size, color, checkout_url, vendor_id, vendors(id, business_name, owner_name, whatsapp_number, city, business_description, category, status, website_url, checkout_pref, is_formal_business)")
+        .select("id, title, description, price_zar, category, image_url, images, status, is_sold, size, color, checkout_url, vendor_id, vendors(id, business_name, owner_name, whatsapp_number, city, business_description, category, status, website_url, checkout_pref, is_formal_business, verified, is_official, logo_url, social_tiktok, social_instagram, social_facebook)")
         .eq("id", id).maybeSingle();
       if (error) throw error;
       if (!data || data.status !== "approved") throw notFound();
