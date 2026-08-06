@@ -93,6 +93,8 @@ export function buildCartMessage(opts: {
   buyerName: string;
   items: CartItem[];
   note: string;
+  address?: string;
+  tip?: number;
 }) {
   const lines = opts.items.map((i) => {
     const bits = [i.title, `Qty: ${i.qty}`, `Price: R${i.price_zar}`];
@@ -101,19 +103,24 @@ export function buildCartMessage(opts: {
     if (i.comment) bits.push(`Note: ${i.comment}`);
     return `\u2022 ${bits.join(" | ")}`;
   });
-  const total = opts.items.reduce((s, i) => s + i.qty * Number(i.price_zar), 0);
+  const subtotal = opts.items.reduce((s, i) => s + i.qty * Number(i.price_zar), 0);
+  const tip = Number(opts.tip ?? 0);
+  const total = subtotal + (tip > 0 ? tip : 0);
   return [
     `Hey! I saw your listing on Niberdealz and I am interested.`,
     ``,
     `Buyer: ${opts.buyerName}`,
+    opts.address ? `Address or meetup spot: ${opts.address}` : "",
     ``,
     ...lines,
     ``,
+    `Subtotal: R${subtotal.toLocaleString("en-ZA")}`,
+    tip > 0 ? `Tip for the seller: R${tip.toLocaleString("en-ZA")}` : "",
     `Total: R${total.toLocaleString("en-ZA")}`,
     opts.note ? `\nComment: ${opts.note}` : "",
     ``,
     `Let me know when and where we can meet up to check it out.`,
   ]
-    .filter((l) => l !== undefined)
+    .filter((l) => l !== "")
     .join("\n");
 }
