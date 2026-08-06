@@ -217,6 +217,7 @@ function Dashboard() {
 
         {vendor.status === "approved" && (
           <>
+            <VerificationCard vendor={vendor} userId={user!.id} />
             <div id="promote-anchor" />
             <PromotionsCard vendor={vendor} userId={user!.id} />
             <VendorAnalyticsCard userId={user!.id} />
