@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, MapPin, MessageCircle, Store, Trash2, Flag, Star, ShoppingCart } from "lucide-react";
+import { ArrowLeft, MapPin, MessageCircle, Store, Trash2, Flag, Star, ShoppingCart, BadgeCheck, Crown, Globe } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { SiteHeader, SiteFooter } from "@/components/site-header";
