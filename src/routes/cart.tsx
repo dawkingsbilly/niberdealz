@@ -57,7 +57,13 @@ function CartPage() {
       toast.error("This seller has no WhatsApp number on file.");
       return;
     }
-    const text = buildCartMessage({ buyerName: buyerName.trim(), items: list, note: note.trim() });
+    const text = buildCartMessage({
+      buyerName: buyerName.trim(),
+      items: list,
+      note: note.trim(),
+      address: address.trim(),
+      tip: tip === "" ? 0 : Number(tip),
+    });
     window.open(`https://wa.me/${number}?text=${encodeURIComponent(text)}`, "_blank", "noopener");
     list.forEach((i) => {
       supabase.from("product_events").insert({ product_id: i.product_id, vendor_id: i.vendor_id, event_type: "checkout" }).then(() => {});
