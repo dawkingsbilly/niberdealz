@@ -16,6 +16,7 @@ import { adminDeleteProduct, ownerDeleteVendor, ownerListUsers, promoteToRole, s
 import { ThemesTab } from "@/components/admin/themes-tab";
 import { PaymentsTab } from "@/components/admin/payments-tab";
 import { VerificationTab } from "@/components/admin/verification-tab";
+import { socialUrl } from "@/lib/socials";
 
 export const Route = createFileRoute("/_authenticated/admin")({ component: Admin });
 
