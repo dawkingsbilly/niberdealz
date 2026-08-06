@@ -70,6 +70,7 @@ function Admin() {
 
         {tab === "overview" && <OverviewTab />}
         {tab === "approvals" && <ApprovalsTab qc={qc} />}
+        {tab === "verification" && <VerificationTab />}
         {tab === "listings" && <ListingsTab qc={qc} />}
         {tab === "stores" && isOwner && <StoresTab qc={qc} />}
         {tab === "payments" && <PaymentsTab />}
