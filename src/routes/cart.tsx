@@ -177,12 +177,13 @@ function CartPage() {
                       Store total: <strong>R{list.reduce((s, i) => s + i.qty * Number(i.price_zar), 0).toLocaleString("en-ZA")}</strong>
                     </div>
                     <Button
-                      disabled={!identified}
+                      disabled={!identified || !safetyOk}
                       onClick={() => checkout(vendorId, list)}
                       className="bg-[#25D366] hover:bg-[#25D366]/90 text-white gap-2"
                     >
                       <MessageCircle className="h-4 w-4" /> Check out on WhatsApp
                     </Button>
+
                   </div>
 
                   {sent.includes(vendorId) && (
