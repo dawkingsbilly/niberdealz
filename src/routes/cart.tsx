@@ -244,13 +244,38 @@ function CartPage() {
                 <div className="text-sm text-muted-foreground">{count} item{count !== 1 ? "s" : ""}</div>
                 <div className="font-display text-2xl font-bold">R{total.toLocaleString("en-ZA")}</div>
               </div>
-              <div className="mt-3 flex justify-end">
+              <div className="mt-5 rounded-xl border border-[color:var(--deal)]/40 bg-[var(--deal)]/5 p-4">
+                <p className="text-sm font-semibold flex items-center gap-2"><ShieldAlert className="h-4 w-4 text-[color:var(--deal)]" />Safety protocol</p>
+                <ul className="mt-2 list-disc pl-5 text-xs text-foreground/80 space-y-1">
+                  <li>Never send money upfront. Pay in person, after you inspected the item.</li>
+                  <li>Meet in a busy public place in daylight and tell a friend where you are going.</li>
+                  <li>Keep the conversation on the WhatsApp number listed on the store.</li>
+                  <li>Never share your ID number, banking PIN, OTP or NSFAS details.</li>
+                </ul>
+                <label className="mt-3 flex items-start gap-2 text-xs font-medium cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={safetyOk}
+                    onChange={(e) => setSafetyOk(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 accent-[var(--deal)]"
+                  />
+                  <span>I have read the safety protocol and I will pay only in person after inspecting the item. <Link to="/safety" className="underline">Full guidelines</Link></span>
+                </label>
+              </div>
+
+              <div className="mt-5 pt-4 border-t flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">{count} item{count !== 1 ? "s" : ""}</div>
+                <div className="font-display text-2xl font-bold">R{total.toLocaleString("en-ZA")}</div>
+              </div>
+              <div className="mt-3 flex justify-end gap-2">
+                <Button asChild variant="outline" size="sm"><Link to="/orders">Order status</Link></Button>
                 <Button variant="ghost" size="sm" onClick={clear}>Clear cart</Button>
               </div>
               <p className="text-xs text-muted-foreground mt-3">
                 Niberdealz never handles your money. Pay the seller in person after you inspect the item.
               </p>
             </div>
+
           </>
         )}
       </div>
