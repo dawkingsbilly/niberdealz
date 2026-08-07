@@ -229,7 +229,9 @@ export function SiteFooter() {
           <h4 className="font-semibold mb-3 text-foreground">Support</h4>
           <ul className="space-y-2 text-muted-foreground">
             <li><Link to="/safety" className="hover:text-foreground transition"><span className="inline-flex items-center gap-1"><ShieldAlert className="h-3.5 w-3.5" />Safety guidelines</span></Link></li>
+            <li><Link to="/orders" className="hover:text-foreground transition">Order status</Link></li>
             <li><Link to="/contact" className="hover:text-foreground transition">Contact us</Link></li>
+
           </ul>
         </div>
         <div>
