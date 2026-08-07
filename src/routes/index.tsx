@@ -39,7 +39,7 @@ export const Route = createFileRoute("/")({
     ],
     links: [
       { rel: "canonical", href: "https://niberdealz.lovable.app/" },
-      { rel: "preload", as: "image", href: img1.url, fetchpriority: "high" },
+      { rel: "preload", as: "image", href: img1, fetchpriority: "high" },
     ],
     scripts: [
       {
@@ -200,7 +200,7 @@ function Home() {
   const SLIDES = useMemo(() => {
     const urls = (products as any[]).map((p) => p.image_url).filter(Boolean) as string[];
     const uniq = Array.from(new Set(urls)).slice(0, 7);
-    return uniq.length >= 3 ? uniq : FALLBACK_SLIDES.map((a) => a.url);
+    return uniq.length >= 3 ? uniq : FALLBACK_SLIDES;
   }, [products]);
 
   useEffect(() => {
