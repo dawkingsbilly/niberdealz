@@ -33,7 +33,9 @@ function CartPage() {
   const [tip, setTip] = useState("");
   const [note, setNote] = useState("");
   const [guestOk, setGuestOk] = useState(false);
+  const [safetyOk, setSafetyOk] = useState(false);
   const [sent, setSent] = useState<string[]>([]);
+
 
   const groups = useMemo(() => {
     const map = new Map<string, CartItem[]>();
