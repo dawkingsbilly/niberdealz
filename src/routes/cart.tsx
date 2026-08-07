@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, MessageCircle, ShoppingCart, Store, Trash2, UserPlus } from "lucide-react";
+import { ArrowLeft, MessageCircle, ShieldAlert, ShoppingCart, Store, Trash2, UserPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { SiteHeader, SiteFooter } from "@/components/site-header";
