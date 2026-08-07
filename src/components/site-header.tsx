@@ -147,6 +147,8 @@ export function SiteHeader() {
                   </Link>
                 </SheetClose>
                 <MenuLink to="/cart" icon={ShoppingCart} label="Your cart" />
+                <MenuLink to="/orders" icon={ClipboardList} label="Order status" />
+
                 <MenuLink to="/safety" icon={ShieldAlert} label="Safety guidelines" />
                 <MenuLink to="/contact" icon={Mail} label="Contact us" />
 
