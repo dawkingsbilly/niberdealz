@@ -189,12 +189,14 @@ function CartPage() {
                     <div className="mt-4 rounded-xl border border-border bg-secondary/50 p-4">
                       <p className="text-sm font-medium">Did the sale go through?</p>
                       <p className="text-xs text-muted-foreground mt-0.5">This helps the seller track real sales. It stays private.</p>
-                      <div className="mt-3 flex gap-2">
+                      <div className="mt-3 flex flex-wrap gap-2">
                         <Button size="sm" onClick={() => confirmSale(vendorId, list, true)}>Yes, I bought it</Button>
                         <Button size="sm" variant="outline" onClick={() => confirmSale(vendorId, list, false)}>Not yet</Button>
+                        <Button asChild size="sm" variant="ghost"><Link to="/orders">Track this order</Link></Button>
                       </div>
                     </div>
                   )}
+
                 </div>
               ))}
             </div>
