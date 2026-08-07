@@ -52,24 +52,43 @@ function CartPage() {
       toast.error("Please add your name so the seller knows who is buying.");
       return;
     }
+    if (!safetyOk) {
+      toast.error("Please accept the safety protocol before you check out.");
+      return;
+    }
     const number = (list[0].whatsapp_number ?? "").replace(/[^0-9]/g, "");
     if (!number) {
       toast.error("This seller has no WhatsApp number on file.");
       return;
     }
+    const tipValue = tip === "" ? 0 : Number(tip);
     const text = buildCartMessage({
       buyerName: buyerName.trim(),
       items: list,
       note: note.trim(),
       address: address.trim(),
-      tip: tip === "" ? 0 : Number(tip),
+      tip: tipValue,
     });
     window.open(`https://wa.me/${number}?text=${encodeURIComponent(text)}`, "_blank", "noopener");
+    const order = createOrder({
+      vendor_id: vendorId,
+      vendor_name: list[0].vendor_name,
+      whatsapp_number: list[0].whatsapp_number,
+      buyer_name: buyerName.trim(),
+      address: address.trim(),
+      note: note.trim(),
+      tip: tipValue,
+      total: list.reduce((s, i) => s + i.qty * Number(i.price_zar), 0) + (tipValue > 0 ? tipValue : 0),
+      items: list,
+      safety_accepted: true,
+    });
+    toast.success(`Order ${order.id} created. Track it on your order status page.`);
     list.forEach((i) => {
       supabase.from("product_events").insert({ product_id: i.product_id, vendor_id: i.vendor_id, event_type: "checkout" }).then(() => {});
     });
     setSent((s) => (s.includes(vendorId) ? s : [...s, vendorId]));
   };
+
 
   const confirmSale = (vendorId: string, list: CartItem[], yes: boolean) => {
     list.forEach((i) => {
