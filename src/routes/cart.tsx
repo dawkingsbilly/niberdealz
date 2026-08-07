@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, MessageCircle, ShoppingCart, Store, Trash2, UserPlus } from "lucide-react";
+import { ArrowLeft, MessageCircle, ShieldAlert, ShoppingCart, Store, Trash2, UserPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { SiteHeader, SiteFooter } from "@/components/site-header";
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useCart, buildCartMessage, lineKey, type CartItem } from "@/lib/cart";
+import { useCart, buildCartMessage, createOrder, lineKey, type CartItem } from "@/lib/cart";
 
 export const Route = createFileRoute("/cart")({
   head: () => ({
@@ -33,7 +33,9 @@ function CartPage() {
   const [tip, setTip] = useState("");
   const [note, setNote] = useState("");
   const [guestOk, setGuestOk] = useState(false);
+  const [safetyOk, setSafetyOk] = useState(false);
   const [sent, setSent] = useState<string[]>([]);
+
 
   const groups = useMemo(() => {
     const map = new Map<string, CartItem[]>();
@@ -52,24 +54,43 @@ function CartPage() {
       toast.error("Please add your name so the seller knows who is buying.");
       return;
     }
+    if (!safetyOk) {
+      toast.error("Please accept the safety protocol before you check out.");
+      return;
+    }
     const number = (list[0].whatsapp_number ?? "").replace(/[^0-9]/g, "");
     if (!number) {
       toast.error("This seller has no WhatsApp number on file.");
       return;
     }
+    const tipValue = tip === "" ? 0 : Number(tip);
     const text = buildCartMessage({
       buyerName: buyerName.trim(),
       items: list,
       note: note.trim(),
       address: address.trim(),
-      tip: tip === "" ? 0 : Number(tip),
+      tip: tipValue,
     });
     window.open(`https://wa.me/${number}?text=${encodeURIComponent(text)}`, "_blank", "noopener");
+    const order = createOrder({
+      vendor_id: vendorId,
+      vendor_name: list[0].vendor_name,
+      whatsapp_number: list[0].whatsapp_number,
+      buyer_name: buyerName.trim(),
+      address: address.trim(),
+      note: note.trim(),
+      tip: tipValue,
+      total: list.reduce((s, i) => s + i.qty * Number(i.price_zar), 0) + (tipValue > 0 ? tipValue : 0),
+      items: list,
+      safety_accepted: true,
+    });
+    toast.success(`Order ${order.id} created. Track it on your order status page.`);
     list.forEach((i) => {
       supabase.from("product_events").insert({ product_id: i.product_id, vendor_id: i.vendor_id, event_type: "checkout" }).then(() => {});
     });
     setSent((s) => (s.includes(vendorId) ? s : [...s, vendorId]));
   };
+
 
   const confirmSale = (vendorId: string, list: CartItem[], yes: boolean) => {
     list.forEach((i) => {
@@ -156,24 +177,27 @@ function CartPage() {
                       Store total: <strong>R{list.reduce((s, i) => s + i.qty * Number(i.price_zar), 0).toLocaleString("en-ZA")}</strong>
                     </div>
                     <Button
-                      disabled={!identified}
+                      disabled={!identified || !safetyOk}
                       onClick={() => checkout(vendorId, list)}
                       className="bg-[#25D366] hover:bg-[#25D366]/90 text-white gap-2"
                     >
                       <MessageCircle className="h-4 w-4" /> Check out on WhatsApp
                     </Button>
+
                   </div>
 
                   {sent.includes(vendorId) && (
                     <div className="mt-4 rounded-xl border border-border bg-secondary/50 p-4">
                       <p className="text-sm font-medium">Did the sale go through?</p>
                       <p className="text-xs text-muted-foreground mt-0.5">This helps the seller track real sales. It stays private.</p>
-                      <div className="mt-3 flex gap-2">
+                      <div className="mt-3 flex flex-wrap gap-2">
                         <Button size="sm" onClick={() => confirmSale(vendorId, list, true)}>Yes, I bought it</Button>
                         <Button size="sm" variant="outline" onClick={() => confirmSale(vendorId, list, false)}>Not yet</Button>
+                        <Button asChild size="sm" variant="ghost"><Link to="/orders">Track this order</Link></Button>
                       </div>
                     </div>
                   )}
+
                 </div>
               ))}
             </div>
@@ -220,13 +244,38 @@ function CartPage() {
                 <div className="text-sm text-muted-foreground">{count} item{count !== 1 ? "s" : ""}</div>
                 <div className="font-display text-2xl font-bold">R{total.toLocaleString("en-ZA")}</div>
               </div>
-              <div className="mt-3 flex justify-end">
+              <div className="mt-5 rounded-xl border border-[color:var(--deal)]/40 bg-[var(--deal)]/5 p-4">
+                <p className="text-sm font-semibold flex items-center gap-2"><ShieldAlert className="h-4 w-4 text-[color:var(--deal)]" />Safety protocol</p>
+                <ul className="mt-2 list-disc pl-5 text-xs text-foreground/80 space-y-1">
+                  <li>Never send money upfront. Pay in person, after you inspected the item.</li>
+                  <li>Meet in a busy public place in daylight and tell a friend where you are going.</li>
+                  <li>Keep the conversation on the WhatsApp number listed on the store.</li>
+                  <li>Never share your ID number, banking PIN, OTP or NSFAS details.</li>
+                </ul>
+                <label className="mt-3 flex items-start gap-2 text-xs font-medium cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={safetyOk}
+                    onChange={(e) => setSafetyOk(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 accent-[var(--deal)]"
+                  />
+                  <span>I have read the safety protocol and I will pay only in person after inspecting the item. <Link to="/safety" className="underline">Full guidelines</Link></span>
+                </label>
+              </div>
+
+              <div className="mt-5 pt-4 border-t flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">{count} item{count !== 1 ? "s" : ""}</div>
+                <div className="font-display text-2xl font-bold">R{total.toLocaleString("en-ZA")}</div>
+              </div>
+              <div className="mt-3 flex justify-end gap-2">
+                <Button asChild variant="outline" size="sm"><Link to="/orders">Order status</Link></Button>
                 <Button variant="ghost" size="sm" onClick={clear}>Clear cart</Button>
               </div>
               <p className="text-xs text-muted-foreground mt-3">
                 Niberdealz never handles your money. Pay the seller in person after you inspect the item.
               </p>
             </div>
+
           </>
         )}
       </div>

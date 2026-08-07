@@ -124,3 +124,85 @@ export function buildCartMessage(opts: {
     .filter((l) => l !== "")
     .join("\n");
 }
+
+/* ---------------- Orders (local order tracking) ---------------- */
+
+export type OrderStatus = "sent" | "meetup_agreed" | "completed" | "cancelled";
+
+export type Order = {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  status: OrderStatus;
+  vendor_id: string;
+  vendor_name: string;
+  whatsapp_number: string;
+  buyer_name: string;
+  address: string;
+  note: string;
+  tip: number;
+  total: number;
+  items: CartItem[];
+  safety_accepted: boolean;
+};
+
+const ORDERS_KEY = "nd_orders_v1";
+const ORDERS_EVENT = "nd_orders_change";
+
+export const ORDER_STEPS: { key: OrderStatus; label: string; hint: string }[] = [
+  { key: "sent", label: "Order sent", hint: "Your order went to the seller on WhatsApp. Agree on a public meetup spot before you travel." },
+  { key: "meetup_agreed", label: "Meetup agreed", hint: "Meet in a busy public place in daylight, and tell a friend where you are going." },
+  { key: "completed", label: "Completed", hint: "You inspected the item and paid in person. Leave the store a review." },
+];
+
+export function readOrders(): Order[] {
+  if (typeof localStorage === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(ORDERS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeOrders(orders: Order[]) {
+  if (typeof localStorage === "undefined") return;
+  localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
+  window.dispatchEvent(new Event(ORDERS_EVENT));
+}
+
+export function createOrder(o: Omit<Order, "id" | "created_at" | "updated_at" | "status">): Order {
+  const now = new Date().toISOString();
+  const ref = `ND${Date.now().toString(36).toUpperCase().slice(-6)}`;
+  const order: Order = { ...o, id: ref, created_at: now, updated_at: now, status: "sent" };
+  writeOrders([order, ...readOrders()]);
+  return order;
+}
+
+export function useOrders() {
+  const [orders, setOrders] = useState<Order[]>([]);
+
+  useEffect(() => {
+    const sync = () => setOrders(readOrders());
+    sync();
+    window.addEventListener(ORDERS_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(ORDERS_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
+
+  const setStatus = useCallback((id: string, status: OrderStatus) => {
+    writeOrders(
+      readOrders().map((o) => (o.id === id ? { ...o, status, updated_at: new Date().toISOString() } : o)),
+    );
+  }, []);
+
+  const removeOrder = useCallback((id: string) => {
+    writeOrders(readOrders().filter((o) => o.id !== id));
+  }, []);
+
+  return { orders, setStatus, removeOrder };
+}

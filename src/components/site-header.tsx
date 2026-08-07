@@ -1,6 +1,6 @@
 import { Link, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
-import { LogOut, LayoutDashboard, ShieldCheck, Crown, ShieldAlert, Lock, Menu, MessageCircle, Mail, Home, LogIn, Store, Search, ShoppingCart } from "lucide-react";
+import { LogOut, LayoutDashboard, ShieldCheck, Crown, ShieldAlert, Lock, Menu, MessageCircle, Mail, Home, LogIn, Store, Search, ShoppingCart, ClipboardList } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose 
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SITE_NAME, CONTACT_EMAIL } from "@/lib/constants";
 import { useCart } from "@/lib/cart";
-import logoAsset from "@/assets/niber-logo.ico.asset.json";
+import logoUrl from "@/assets/niber-logo.png";
 
 const WHATSAPP_CHANNEL = "https://wa.me/channel/0029VaOb9f1KbYMSEsUT6T46";
 const BRAND = SITE_NAME.toUpperCase();
@@ -19,7 +19,7 @@ function Brand() {
   return (
     <Link to="/" className="flex items-center gap-3 min-w-0">
       <img
-        src={logoAsset.url}
+        src={logoUrl}
         alt={`${BRAND} logo`}
         className="h-11 w-11 object-contain shrink-0"
         draggable={false}
@@ -147,6 +147,8 @@ export function SiteHeader() {
                   </Link>
                 </SheetClose>
                 <MenuLink to="/cart" icon={ShoppingCart} label="Your cart" />
+                <MenuLink to="/orders" icon={ClipboardList} label="Order status" />
+
                 <MenuLink to="/safety" icon={ShieldAlert} label="Safety guidelines" />
                 <MenuLink to="/contact" icon={Mail} label="Contact us" />
 
@@ -200,7 +202,7 @@ export function SiteFooter() {
       <div className="container mx-auto px-4 py-12 grid gap-10 md:grid-cols-4 text-sm">
         <div className="md:col-span-1">
           <div className="flex items-center gap-2.5 mb-3">
-            <img src={logoAsset.url} alt={`${BRAND} logo`} className="h-9 w-9 object-contain" />
+            <img src={logoUrl} alt={`${BRAND} logo`} className="h-9 w-9 object-contain" />
             <span className="font-display font-extrabold tracking-tight text-base">{BRAND}</span>
           </div>
           <p className="text-muted-foreground leading-relaxed">
@@ -227,7 +229,9 @@ export function SiteFooter() {
           <h4 className="font-semibold mb-3 text-foreground">Support</h4>
           <ul className="space-y-2 text-muted-foreground">
             <li><Link to="/safety" className="hover:text-foreground transition"><span className="inline-flex items-center gap-1"><ShieldAlert className="h-3.5 w-3.5" />Safety guidelines</span></Link></li>
+            <li><Link to="/orders" className="hover:text-foreground transition">Order status</Link></li>
             <li><Link to="/contact" className="hover:text-foreground transition">Contact us</Link></li>
+
           </ul>
         </div>
         <div>
