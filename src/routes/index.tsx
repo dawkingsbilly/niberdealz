@@ -12,17 +12,18 @@ import { Input } from "@/components/ui/input";
 import { CATEGORIES, SITE_NAME, CONTACT_EMAIL } from "@/lib/constants";
 
 
-import shoe1 from "@/assets/IMG-20260604-WA0140.jpg.asset.json";
-import shoe2 from "@/assets/IMG-20260606-WA0028.jpg.asset.json";
-import shoe3 from "@/assets/IMG-20260606-WA0041.jpg.asset.json";
-import shoe4 from "@/assets/IMG-20260606-WA0047.jpg.asset.json";
-import shoe5 from "@/assets/IMG-20260606-WA0082.jpg.asset.json";
-import shoe6 from "@/assets/IMG-20260608-WA0019.jpg.asset.json";
-import shoe7 from "@/assets/IMG-20260608-WA0020.jpg.asset.json";
+import shoe1 from "@/assets/IMG-20260604-WA0140.jpg";
+import shoe2 from "@/assets/IMG-20260606-WA0028.jpg";
+import shoe3 from "@/assets/IMG-20260606-WA0041.jpg";
+import shoe4 from "@/assets/IMG-20260606-WA0047.jpg";
+import shoe5 from "@/assets/IMG-20260606-WA0082.jpg";
+import shoe6 from "@/assets/IMG-20260608-WA0019.jpg";
+import shoe7 from "@/assets/IMG-20260608-WA0020.jpg";
 
 /** Real product photos from stores on the marketplace (used until live listings load). */
 const FALLBACK_SLIDES = [shoe1, shoe2, shoe3, shoe4, shoe5, shoe6, shoe7];
 const img1 = shoe1;
+
 
 
 export const Route = createFileRoute("/")({
