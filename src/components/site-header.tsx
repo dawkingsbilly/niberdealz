@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose 
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SITE_NAME, CONTACT_EMAIL } from "@/lib/constants";
 import { useCart } from "@/lib/cart";
-import logoAsset from "@/assets/niber-logo.ico.asset.json";
+import logoUrl from "@/assets/niber-logo.png";
 
 const WHATSAPP_CHANNEL = "https://wa.me/channel/0029VaOb9f1KbYMSEsUT6T46";
 const BRAND = SITE_NAME.toUpperCase();
@@ -19,7 +19,7 @@ function Brand() {
   return (
     <Link to="/" className="flex items-center gap-3 min-w-0">
       <img
-        src={logoAsset.url}
+        src={logoUrl}
         alt={`${BRAND} logo`}
         className="h-11 w-11 object-contain shrink-0"
         draggable={false}
@@ -200,7 +200,7 @@ export function SiteFooter() {
       <div className="container mx-auto px-4 py-12 grid gap-10 md:grid-cols-4 text-sm">
         <div className="md:col-span-1">
           <div className="flex items-center gap-2.5 mb-3">
-            <img src={logoAsset.url} alt={`${BRAND} logo`} className="h-9 w-9 object-contain" />
+            <img src={logoUrl} alt={`${BRAND} logo`} className="h-9 w-9 object-contain" />
             <span className="font-display font-extrabold tracking-tight text-base">{BRAND}</span>
           </div>
           <p className="text-muted-foreground leading-relaxed">

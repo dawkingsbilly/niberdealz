@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CATEGORIES, SITE_NAME } from "@/lib/constants";
 import { submitVendorRegistration } from "@/lib/marketplace.functions";
-import logoAsset from "@/assets/niber-logo.ico.asset.json";
+import logoUrl from "@/assets/niber-logo.png";
 
 export const Route = createFileRoute("/_authenticated/register-shop")({
   component: RegisterShop,
@@ -122,7 +122,7 @@ function RegisterShop() {
       <div className="max-w-xl mx-auto">
         <div className="flex items-center gap-2 justify-center mb-6 text-white">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--deal)] overflow-hidden">
-            <img src={logoAsset.url} alt="" className="h-9 w-9 object-contain" />
+            <img src={logoUrl} alt="" className="h-9 w-9 object-contain" />
           </div>
           <span className="font-display text-xl font-bold">{SITE_NAME}</span>
         </div>
