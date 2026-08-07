@@ -1,6 +1,6 @@
 import { Link, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
-import { LogOut, LayoutDashboard, ShieldCheck, Crown, ShieldAlert, Lock, Menu, MessageCircle, Mail, Home, LogIn, Store, Search, ShoppingCart } from "lucide-react";
+import { LogOut, LayoutDashboard, ShieldCheck, Crown, ShieldAlert, Lock, Menu, MessageCircle, Mail, Home, LogIn, Store, Search, ShoppingCart, ClipboardList } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
