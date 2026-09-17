@@ -14,6 +14,169 @@ export type Database = {
   }
   public: {
     Tables: {
+      affiliate_payouts: {
+        Row: {
+          affiliate_id: string
+          amount_zar: number
+          created_at: string
+          details: string
+          id: string
+          method: string
+          points_spent: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          affiliate_id: string
+          amount_zar: number
+          created_at?: string
+          details?: string
+          id?: string
+          method?: string
+          points_spent: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          affiliate_id?: string
+          amount_zar?: number
+          created_at?: string
+          details?: string
+          id?: string
+          method?: string
+          points_spent?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_payouts_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_points_ledger: {
+        Row: {
+          affiliate_id: string
+          created_at: string
+          id: string
+          kind: string
+          note: string
+          order_id: string | null
+          points: number
+        }
+        Insert: {
+          affiliate_id: string
+          created_at?: string
+          id?: string
+          kind: string
+          note?: string
+          order_id?: string | null
+          points: number
+        }
+        Update: {
+          affiliate_id?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          note?: string
+          order_id?: string | null
+          points?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_points_ledger_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_points_ledger_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_referrals: {
+        Row: {
+          affiliate_id: string
+          created_at: string
+          has_purchased: boolean
+          id: string
+          points_awarded: number
+          referred_user_id: string
+          source: string
+        }
+        Insert: {
+          affiliate_id: string
+          created_at?: string
+          has_purchased?: boolean
+          id?: string
+          points_awarded?: number
+          referred_user_id: string
+          source?: string
+        }
+        Update: {
+          affiliate_id?: string
+          created_at?: string
+          has_purchased?: boolean
+          id?: string
+          points_awarded?: number
+          referred_user_id?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_referrals_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliates: {
+        Row: {
+          code: string
+          created_at: string
+          display_name: string
+          id: string
+          paid_out_zar: number
+          points: number
+          points_redeemed: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          display_name?: string
+          id?: string
+          paid_out_zar?: number
+          points?: number
+          points_redeemed?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          display_name?: string
+          id?: string
+          paid_out_zar?: number
+          points?: number
+          points_redeemed?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       broadcasts: {
         Row: {
           audience: string
@@ -49,6 +212,143 @@ export type Database = {
           subject?: string
         }
         Relationships: []
+      }
+      order_items: {
+        Row: {
+          color: string | null
+          comment: string
+          created_at: string
+          id: string
+          image_url: string | null
+          order_id: string
+          product_id: string | null
+          qty: number
+          size: string | null
+          title: string
+          unit_price_zar: number
+        }
+        Insert: {
+          color?: string | null
+          comment?: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          order_id: string
+          product_id?: string | null
+          qty?: number
+          size?: string | null
+          title: string
+          unit_price_zar: number
+        }
+        Update: {
+          color?: string | null
+          comment?: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          order_id?: string
+          product_id?: string | null
+          qty?: number
+          size?: string | null
+          title?: string
+          unit_price_zar?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          affiliate_id: string | null
+          buyer_id: string
+          buyer_name: string
+          buyer_phone: string
+          coupon_code: string | null
+          created_at: string
+          delivery_address: string
+          delivery_days: number | null
+          delivery_fee_zar: number
+          delivery_method: string
+          discount_zar: number
+          id: string
+          note: string
+          payment_status: string
+          points_used: number
+          reference: string
+          status: string
+          subtotal_zar: number
+          total_zar: number
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          affiliate_id?: string | null
+          buyer_id: string
+          buyer_name?: string
+          buyer_phone?: string
+          coupon_code?: string | null
+          created_at?: string
+          delivery_address?: string
+          delivery_days?: number | null
+          delivery_fee_zar?: number
+          delivery_method?: string
+          discount_zar?: number
+          id?: string
+          note?: string
+          payment_status?: string
+          points_used?: number
+          reference: string
+          status?: string
+          subtotal_zar?: number
+          total_zar?: number
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          affiliate_id?: string | null
+          buyer_id?: string
+          buyer_name?: string
+          buyer_phone?: string
+          coupon_code?: string | null
+          created_at?: string
+          delivery_address?: string
+          delivery_days?: number | null
+          delivery_fee_zar?: number
+          delivery_method?: string
+          discount_zar?: number
+          id?: string
+          note?: string
+          payment_status?: string
+          points_used?: number
+          reference?: string
+          status?: string
+          subtotal_zar?: number
+          total_zar?: number
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payments: {
         Row: {
@@ -189,6 +489,7 @@ export type Database = {
           checkout_url: string | null
           color: string | null
           created_at: string
+          delivery_options: Json
           description: string
           id: string
           image_url: string | null
@@ -210,6 +511,7 @@ export type Database = {
           checkout_url?: string | null
           color?: string | null
           created_at?: string
+          delivery_options?: Json
           description: string
           id?: string
           image_url?: string | null
@@ -231,6 +533,7 @@ export type Database = {
           checkout_url?: string | null
           color?: string | null
           created_at?: string
+          delivery_options?: Json
           description?: string
           id?: string
           image_url?: string | null
