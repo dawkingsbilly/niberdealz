@@ -1,7 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, MessageCircle, ShieldAlert, ShoppingCart, Store, Trash2, UserPlus } from "lucide-react";
+import { ArrowLeft, Loader2, ShoppingCart, Trash2, Truck, UserPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { SiteHeader, SiteFooter } from "@/components/site-header";
@@ -9,15 +9,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useCart, buildCartMessage, createOrder, lineKey, type CartItem } from "@/lib/cart";
+import { useCart, lineKey, type CartItem } from "@/lib/cart";
+import { placeOrder } from "@/lib/orders.functions";
+import {
+  DELIVERY_METHODS,
+  MIN_POINTS_TO_SPEND,
+  POINT_VALUE_ZAR,
+  deliveryLabel,
+  parseDeliveryOptions,
+  type DeliveryOption,
+} from "@/lib/affiliate";
 
 export const Route = createFileRoute("/cart")({
   head: () => ({
     meta: [
       { title: "Your cart | Niberdealz" },
-      { name: "description", content: "Review the items you picked, add sizes, colours and a note, then send your order to the seller on WhatsApp." },
+      { name: "description", content: "Review your items, choose delivery, apply a coupon or reward points and place your order on Niberdealz." },
       { property: "og:title", content: "Your cart | Niberdealz" },
-      { property: "og:description", content: "Review your Niberdealz picks and send your order to the seller on WhatsApp." },
+      { property: "og:description", content: "Review your Niberdealz picks and place your order on the website." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -27,15 +36,18 @@ export const Route = createFileRoute("/cart")({
 
 function CartPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { items, count, total, setQty, setComment, remove, clear } = useCart();
-  const [buyerName, setBuyerName] = useState("");
-  const [address, setAddress] = useState("");
-  const [tip, setTip] = useState("");
-  const [note, setNote] = useState("");
-  const [guestOk, setGuestOk] = useState(false);
-  const [safetyOk, setSafetyOk] = useState(false);
-  const [sent, setSent] = useState<string[]>([]);
 
+  const [buyerName, setBuyerName] = useState("");
+  const [buyerPhone, setBuyerPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [note, setNote] = useState("");
+  const [coupon, setCoupon] = useState("");
+  const [points, setPoints] = useState("");
+  const [method, setMethod] = useState<Record<string, string>>({});
+  const [options, setOptions] = useState<Record<string, DeliveryOption[]>>({});
+  const [placing, setPlacing] = useState<string | null>(null);
 
   const groups = useMemo(() => {
     const map = new Map<string, CartItem[]>();
@@ -47,65 +59,56 @@ function CartPage() {
     return Array.from(map.entries());
   }, [items]);
 
-  const identified = !!user || guestOk;
+  // Load each seller's delivery options from their first product in the cart.
+  useEffect(() => {
+    if (items.length === 0) return;
+    const ids = Array.from(new Set(items.map((i) => i.product_id)));
+    (async () => {
+      const { data } = await supabase.from("products").select("id, vendor_id, delivery_options").in("id", ids);
+      const next: Record<string, DeliveryOption[]> = {};
+      (data ?? []).forEach((p: any) => {
+        if (!next[p.vendor_id]) next[p.vendor_id] = parseDeliveryOptions(p.delivery_options);
+      });
+      setOptions(next);
+    })();
+  }, [items.length]);
 
-  const checkout = (vendorId: string, list: CartItem[]) => {
-    if (!buyerName.trim()) {
-      toast.error("Please add your name so the seller knows who is buying.");
+  const submit = async (vendorId: string, list: CartItem[]) => {
+    if (!user) {
+      toast.error("Please create a free account or sign in to place your order.");
       return;
     }
-    if (!safetyOk) {
-      toast.error("Please accept the safety protocol before you check out.");
-      return;
-    }
-    const number = (list[0].whatsapp_number ?? "").replace(/[^0-9]/g, "");
-    if (!number) {
-      toast.error("This seller has no WhatsApp number on file.");
-      return;
-    }
-    const tipValue = tip === "" ? 0 : Number(tip);
-    const text = buildCartMessage({
-      buyerName: buyerName.trim(),
-      items: list,
-      note: note.trim(),
-      address: address.trim(),
-      tip: tipValue,
-    });
-    window.open(`https://wa.me/${number}?text=${encodeURIComponent(text)}`, "_blank", "noopener");
-    const order = createOrder({
-      vendor_id: vendorId,
-      vendor_name: list[0].vendor_name,
-      whatsapp_number: list[0].whatsapp_number,
-      buyer_name: buyerName.trim(),
-      address: address.trim(),
-      note: note.trim(),
-      tip: tipValue,
-      total: list.reduce((s, i) => s + i.qty * Number(i.price_zar), 0) + (tipValue > 0 ? tipValue : 0),
-      items: list,
-      safety_accepted: true,
-    });
-    toast.success(`Order ${order.id} created. Track it on your order status page.`);
-    list.forEach((i) => {
-      supabase.from("product_events").insert({ product_id: i.product_id, vendor_id: i.vendor_id, event_type: "checkout" }).then(() => {});
-    });
-    setSent((s) => (s.includes(vendorId) ? s : [...s, vendorId]));
-  };
-
-
-  const confirmSale = (vendorId: string, list: CartItem[], yes: boolean) => {
-    list.forEach((i) => {
-      supabase.from("product_events").insert({
-        product_id: i.product_id,
-        vendor_id: i.vendor_id,
-        event_type: yes ? "sale_confirmed" : "sale_not_completed",
-      }).then(() => {});
-    });
-    setSent((s) => s.filter((v) => v !== vendorId));
-    if (yes) {
+    if (buyerName.trim().length < 2) { toast.error("Please add your name."); return; }
+    if (buyerPhone.trim().length < 9) { toast.error("Please add a contact number."); return; }
+    const chosen = method[vendorId] ?? options[vendorId]?.[0]?.method ?? "meetup";
+    setPlacing(vendorId);
+    try {
+      const res = await placeOrder({
+        data: {
+          vendor_id: vendorId,
+          items: list.map((i) => ({
+            product_id: i.product_id,
+            qty: i.qty,
+            size: i.size,
+            color: i.color,
+            comment: i.comment ?? "",
+          })),
+          buyer_name: buyerName.trim(),
+          buyer_phone: buyerPhone.trim(),
+          delivery_method: chosen as any,
+          delivery_address: address.trim(),
+          note: note.trim(),
+          coupon_code: coupon.trim().toUpperCase(),
+          points_to_use: points === "" ? 0 : Math.max(0, Math.floor(Number(points))),
+        },
+      });
       list.forEach((i) => remove(lineKey(i)));
-      toast.success("Thanks. We recorded the sale for this seller.");
-    } else {
-      toast.success("Noted. The items stay in your cart.");
+      toast.success(`Order ${res.reference} placed. Total R${res.total_zar.toLocaleString("en-ZA")}.`);
+      navigate({ to: "/orders" });
+    } catch (err: any) {
+      toast.error(err?.message ?? "Could not place your order.");
+    } finally {
+      setPlacing(null);
     }
   };
 
@@ -120,7 +123,7 @@ function CartPage() {
           <ShoppingCart className="h-7 w-7" /> Your cart
         </h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Browsing and adding to your cart is free. You only choose to sign up or continue as a guest when you check out.
+          Choose delivery, add a coupon code or reward points, then place your order right here on the website.
         </p>
 
         {items.length === 0 ? (
@@ -132,150 +135,138 @@ function CartPage() {
           </div>
         ) : (
           <>
-            <div className="mt-6 space-y-6">
-              {groups.map(([vendorId, list]) => (
-                <div key={vendorId} className="rounded-2xl bg-card border border-border p-5 shadow-[var(--shadow-card)]">
-                  <div className="flex items-center gap-2 font-semibold mb-3">
-                    <Store className="h-4 w-4 text-[color:var(--deal)]" />
-                    <Link to="/vendor/$id" params={{ id: vendorId }} className="hover:underline">{list[0].vendor_name}</Link>
-                  </div>
-                  <div className="space-y-4">
-                    {list.map((i) => {
-                      const key = lineKey(i);
-                      return (
-                        <div key={key} className="flex gap-3">
-                          <div className="h-20 w-20 rounded-xl overflow-hidden bg-muted shrink-0">
-                            {i.image_url && <img src={i.image_url} alt={i.title} className="h-full w-full object-cover" />}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <Link to="/product/$id" params={{ id: i.product_id }} className="font-medium hover:underline line-clamp-1">{i.title}</Link>
-                            <div className="text-sm text-muted-foreground">
-                              R{Number(i.price_zar).toLocaleString("en-ZA")}
-                              {i.size ? ` \u00b7 Size ${i.size}` : ""}
-                              {i.color ? ` \u00b7 ${i.color}` : ""}
-                            </div>
-                            <div className="mt-2 flex items-center gap-2">
-                              <Button size="sm" variant="outline" onClick={() => setQty(key, i.qty - 1)}>-</Button>
-                              <span className="w-8 text-center text-sm font-semibold">{i.qty}</span>
-                              <Button size="sm" variant="outline" onClick={() => setQty(key, i.qty + 1)}>+</Button>
-                              <Button size="sm" variant="ghost" onClick={() => remove(key)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                            </div>
-                            <Input
-                              className="mt-2 h-9"
-                              value={i.comment}
-                              onChange={(e) => setComment(key, e.target.value)}
-                              placeholder="Comment for the seller, for example preferred colour"
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  <div className="mt-4 pt-4 border-t flex flex-wrap items-center justify-between gap-3">
-                    <div className="text-sm">
-                      Store total: <strong>R{list.reduce((s, i) => s + i.qty * Number(i.price_zar), 0).toLocaleString("en-ZA")}</strong>
-                    </div>
-                    <Button
-                      disabled={!identified || !safetyOk}
-                      onClick={() => checkout(vendorId, list)}
-                      className="bg-[#25D366] hover:bg-[#25D366]/90 text-white gap-2"
-                    >
-                      <MessageCircle className="h-4 w-4" /> Check out on WhatsApp
-                    </Button>
-
-                  </div>
-
-                  {sent.includes(vendorId) && (
-                    <div className="mt-4 rounded-xl border border-border bg-secondary/50 p-4">
-                      <p className="text-sm font-medium">Did the sale go through?</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">This helps the seller track real sales. It stays private.</p>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <Button size="sm" onClick={() => confirmSale(vendorId, list, true)}>Yes, I bought it</Button>
-                        <Button size="sm" variant="outline" onClick={() => confirmSale(vendorId, list, false)}>Not yet</Button>
-                        <Button asChild size="sm" variant="ghost"><Link to="/orders">Track this order</Link></Button>
-                      </div>
-                    </div>
-                  )}
-
-                </div>
-              ))}
-            </div>
-
             <div className="mt-6 rounded-2xl bg-card border border-border p-5 shadow-[var(--shadow-card)]">
-              <h2 className="font-display text-xl font-bold">Checkout details</h2>
+              <h2 className="font-display text-xl font-bold">Your details</h2>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="buyerName">Your name</Label>
                   <Input id="buyerName" value={buyerName} onChange={(e) => setBuyerName(e.target.value)} placeholder="For example Thabo Sibanda" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="tip">Tip for the seller (optional)</Label>
-                  <Input id="tip" type="number" min="0" step="1" value={tip} onChange={(e) => setTip(e.target.value)} placeholder="Leave blank to skip" />
+                  <Label htmlFor="buyerPhone">Contact number</Label>
+                  <Input id="buyerPhone" value={buyerPhone} onChange={(e) => setBuyerPhone(e.target.value)} placeholder="For example 068 751 0600" />
                 </div>
                 <div className="space-y-1.5 sm:col-span-2">
-                  <Label htmlFor="address">Address or meetup spot</Label>
-                  <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Residence, campus gate, suburb or delivery address" />
+                  <Label htmlFor="address">Delivery or collection address</Label>
+                  <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Street, suburb, city or collection point" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="coupon">Coupon code (optional)</Label>
+                  <Input id="coupon" value={coupon} onChange={(e) => setCoupon(e.target.value.toUpperCase())} placeholder="Affiliate coupon code" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="points">Reward points to use (optional)</Label>
+                  <Input id="points" type="number" min="0" step="1" value={points} onChange={(e) => setPoints(e.target.value)} placeholder={`Minimum ${MIN_POINTS_TO_SPEND} points`} />
+                  <p className="text-xs text-muted-foreground">1 point is worth R{POINT_VALUE_ZAR.toFixed(2)}.</p>
                 </div>
                 <div className="space-y-1.5 sm:col-span-2">
                   <Label htmlFor="note">Comment or special request</Label>
-                  <Textarea id="note" rows={3} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Where you would like to meet, delivery questions, anything else" />
+                  <Textarea id="note" rows={3} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Anything the seller should know" />
                 </div>
               </div>
 
               {!user && (
                 <div className="mt-4 rounded-xl border border-border p-4">
-                  <p className="text-sm font-medium">How would you like to check out?</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <Button asChild size="sm">
-                      <Link to="/auth" search={{ mode: "register", next: "/cart" }}><UserPlus className="h-4 w-4 mr-1.5" />Create a free account</Link>
-                    </Button>
-                    <Button size="sm" variant={guestOk ? "default" : "outline"} onClick={() => setGuestOk(true)}>
-                      Continue as guest
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    An account lets you leave reviews, track your orders and get deal alerts. Guests can still message sellers.
-                  </p>
+                  <p className="text-sm font-medium">You need a free account to place an order.</p>
+                  <Button asChild size="sm" className="mt-3">
+                    <Link to="/auth" search={{ mode: "register", next: "/cart" }}><UserPlus className="h-4 w-4 mr-1.5" />Create a free account</Link>
+                  </Button>
                 </div>
               )}
-
-              <div className="mt-5 pt-4 border-t flex items-center justify-between">
-                <div className="text-sm text-muted-foreground">{count} item{count !== 1 ? "s" : ""}</div>
-                <div className="font-display text-2xl font-bold">R{total.toLocaleString("en-ZA")}</div>
-              </div>
-              <div className="mt-5 rounded-xl border border-[color:var(--deal)]/40 bg-[var(--deal)]/5 p-4">
-                <p className="text-sm font-semibold flex items-center gap-2"><ShieldAlert className="h-4 w-4 text-[color:var(--deal)]" />Safety protocol</p>
-                <ul className="mt-2 list-disc pl-5 text-xs text-foreground/80 space-y-1">
-                  <li>Never send money upfront. Pay in person, after you inspected the item.</li>
-                  <li>Meet in a busy public place in daylight and tell a friend where you are going.</li>
-                  <li>Keep the conversation on the WhatsApp number listed on the store.</li>
-                  <li>Never share your ID number, banking PIN, OTP or NSFAS details.</li>
-                </ul>
-                <label className="mt-3 flex items-start gap-2 text-xs font-medium cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={safetyOk}
-                    onChange={(e) => setSafetyOk(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 accent-[var(--deal)]"
-                  />
-                  <span>I have read the safety protocol and I will pay only in person after inspecting the item. <Link to="/safety" className="underline">Full guidelines</Link></span>
-                </label>
-              </div>
-
-              <div className="mt-5 pt-4 border-t flex items-center justify-between">
-                <div className="text-sm text-muted-foreground">{count} item{count !== 1 ? "s" : ""}</div>
-                <div className="font-display text-2xl font-bold">R{total.toLocaleString("en-ZA")}</div>
-              </div>
-              <div className="mt-3 flex justify-end gap-2">
-                <Button asChild variant="outline" size="sm"><Link to="/orders">Order status</Link></Button>
-                <Button variant="ghost" size="sm" onClick={clear}>Clear cart</Button>
-              </div>
-              <p className="text-xs text-muted-foreground mt-3">
-                Niberdealz never handles your money. Pay the seller in person after you inspect the item.
-              </p>
             </div>
 
+            <div className="mt-6 space-y-6">
+              {groups.map(([vendorId, list]) => {
+                const opts = options[vendorId] ?? [];
+                const chosen = method[vendorId] ?? opts[0]?.method ?? "meetup";
+                const fee = opts.find((o) => o.method === chosen)?.fee_zar ?? 0;
+                const days = opts.find((o) => o.method === chosen)?.days ?? null;
+                const sub = list.reduce((s, i) => s + i.qty * Number(i.price_zar), 0);
+                return (
+                  <div key={vendorId} className="rounded-2xl bg-card border border-border p-5 shadow-[var(--shadow-card)]">
+                    <div className="space-y-4">
+                      {list.map((i) => {
+                        const key = lineKey(i);
+                        return (
+                          <div key={key} className="flex gap-3">
+                            <div className="h-20 w-20 rounded-xl overflow-hidden bg-muted shrink-0">
+                              {i.image_url && <img src={i.image_url} alt={i.title} loading="lazy" className="h-full w-full object-cover" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <Link to="/product/$id" params={{ id: i.product_id }} className="font-medium hover:underline line-clamp-1">{i.title}</Link>
+                              <div className="text-sm text-muted-foreground">
+                                R{Number(i.price_zar).toLocaleString("en-ZA")}
+                                {i.size ? ` \u00b7 Size ${i.size}` : ""}
+                                {i.color ? ` \u00b7 ${i.color}` : ""}
+                              </div>
+                              <div className="mt-2 flex items-center gap-2">
+                                <Button size="sm" variant="outline" onClick={() => setQty(key, i.qty - 1)}>-</Button>
+                                <span className="w-8 text-center text-sm font-semibold">{i.qty}</span>
+                                <Button size="sm" variant="outline" onClick={() => setQty(key, i.qty + 1)}>+</Button>
+                                <Button size="sm" variant="ghost" onClick={() => remove(key)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                              </div>
+                              <Input
+                                className="mt-2 h-9"
+                                value={i.comment}
+                                onChange={(e) => setComment(key, e.target.value)}
+                                placeholder="Comment for the seller, for example preferred colour"
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="mt-4 pt-4 border-t">
+                      <p className="text-sm font-semibold flex items-center gap-2"><Truck className="h-4 w-4 text-[color:var(--deal)]" />Delivery</p>
+                      <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                        {(opts.length ? opts : DELIVERY_METHODS.map((m) => ({ method: m.key, fee_zar: 0, days: 0 }))).map((o) => (
+                          <label key={o.method} className={`flex items-center justify-between gap-2 rounded-xl border p-3 text-sm cursor-pointer ${chosen === o.method ? "border-[color:var(--deal)] bg-[var(--deal)]/5" : "border-border"}`}>
+                            <span className="flex items-center gap-2">
+                              <input
+                                type="radio"
+                                name={`delivery-${vendorId}`}
+                                checked={chosen === o.method}
+                                onChange={() => setMethod((m) => ({ ...m, [vendorId]: o.method }))}
+                                className="accent-[var(--deal)]"
+                              />
+                              {deliveryLabel(o.method)}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {o.fee_zar > 0 ? `R${o.fee_zar}` : "Free"}{o.days ? ` \u00b7 ${o.days} day${o.days === 1 ? "" : "s"}` : ""}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 pt-4 border-t flex flex-wrap items-center justify-between gap-3">
+                      <div className="text-sm">
+                        Items: <strong>R{sub.toLocaleString("en-ZA")}</strong>
+                        {fee > 0 && <> {"\u00b7"} Delivery R{fee.toLocaleString("en-ZA")}</>}
+                        {days ? <> {"\u00b7"} about {days} day{days === 1 ? "" : "s"}</> : null}
+                      </div>
+                      <Button disabled={!user || placing === vendorId} onClick={() => submit(vendorId, list)}>
+                        {placing === vendorId && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                        Place this order
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-6 rounded-2xl bg-card border border-border p-5 shadow-[var(--shadow-card)] flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">{count} item{count !== 1 ? "s" : ""} in your cart</div>
+              <div className="font-display text-2xl font-bold">R{total.toLocaleString("en-ZA")}</div>
+            </div>
+            <div className="mt-3 flex justify-end gap-2">
+              <Button asChild variant="outline" size="sm"><Link to="/orders">Your orders</Link></Button>
+              <Button variant="ghost" size="sm" onClick={clear}>Clear cart</Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              Discounts, delivery fees and totals are calculated on our servers, so what you see is what the seller receives.
+            </p>
           </>
         )}
       </div>
