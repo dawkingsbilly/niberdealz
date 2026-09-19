@@ -226,3 +226,23 @@ export const staffListOrders = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return data ?? [];
   });
+
+/** Seller sets the delivery options that apply to all of their listings. */
+export const setVendorDeliveryOptions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      options: z.array(z.object({
+        method: z.enum(["courier", "paxi", "pickup", "meetup"]),
+        fee_zar: z.number().min(0).max(100000),
+        days: z.number().int().min(0).max(60),
+      })).max(4),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await (context.supabase.from("products") as any)
+      .update({ delivery_options: data.options })
+      .eq("vendor_id", context.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true, count: data.options.length };
+  });
