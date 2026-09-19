@@ -80,7 +80,16 @@ export function ProductCard({ p }: { p: ProductCardData }) {
           {typeof p.stock === "number" && p.stock > 0 && p.stock <= 5 && (
             <span className="text-destructive font-medium">Only {p.stock} left</span>
           )}
+          {typeof p.stock === "number" && p.stock > 5 && (
+            <span className="text-muted-foreground">{p.stock} available</span>
+          )}
         </div>
+
+        <div className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Truck className="h-3 w-3" />
+          <span className="truncate">{delivery}</span>
+        </div>
+
 
       </div>
     </Link>
