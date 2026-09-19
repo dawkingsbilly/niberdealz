@@ -90,7 +90,7 @@ function Home() {
     queryFn: async () => {
       let query = supabase
         .from("products")
-        .select("id, title, price_zar, category, image_url, stock, is_sold, vendor_id, vendors!inner(business_name, city, verified, is_official, status, plan, plan_active_until)")
+        .select("id, title, price_zar, category, image_url, stock, is_sold, vendor_id, delivery_options, vendors!inner(business_name, city, verified, is_official, status, plan, plan_active_until)")
         .eq("status", "approved")
         .eq("vendors.status", "approved")
         .order("created_at", { ascending: false })
