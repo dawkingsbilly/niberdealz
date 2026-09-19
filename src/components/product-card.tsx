@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
-import { Star } from "lucide-react";
+import { Star, Truck } from "lucide-react";
+import { deliverySummary, parseDeliveryOptions } from "@/lib/affiliate";
 
 
 export interface ProductCardData {
@@ -13,6 +14,7 @@ export interface ProductCardData {
   discount_pct?: number | null;
   avg_rating?: number | null;
   review_count?: number | null;
+  delivery_options?: unknown;
   vendors?: {
     business_name: string | null;
     city: string | null;
@@ -25,6 +27,7 @@ export function ProductCard({ p }: { p: ProductCardData }) {
   const discount = p.discount_pct ?? 0;
   const salePrice = discount > 0 ? Math.round(Number(p.price_zar) * (100 - discount)) / 100 : null;
   const soldOut = p.is_sold || p.stock === 0;
+  const delivery = deliverySummary(parseDeliveryOptions(p.delivery_options));
 
   return (
     <Link
@@ -77,7 +80,16 @@ export function ProductCard({ p }: { p: ProductCardData }) {
           {typeof p.stock === "number" && p.stock > 0 && p.stock <= 5 && (
             <span className="text-destructive font-medium">Only {p.stock} left</span>
           )}
+          {typeof p.stock === "number" && p.stock > 5 && (
+            <span className="text-muted-foreground">{p.stock} available</span>
+          )}
         </div>
+
+        <div className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Truck className="h-3 w-3" />
+          <span className="truncate">{delivery}</span>
+        </div>
+
 
       </div>
     </Link>

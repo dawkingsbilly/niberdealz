@@ -1,17 +1,20 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { toast } from "sonner";
-import { ArrowLeft, CheckCircle2, ClipboardList, MapPin, MessageCircle, ShieldAlert, Store, Trash2, XCircle } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { ArrowLeft, ClipboardList, Loader2, MapPin, Truck } from "lucide-react";
 import { SiteHeader, SiteFooter } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
-import { useOrders, ORDER_STEPS, type Order, type OrderStatus } from "@/lib/cart";
+import { useAuth } from "@/hooks/use-auth";
+import { listMyOrders } from "@/lib/orders.functions";
+import { deliveryLabel } from "@/lib/affiliate";
 
 export const Route = createFileRoute("/orders")({
   head: () => ({
     meta: [
-      { title: "Order status | Niberdealz" },
-      { name: "description", content: "Track every order you sent to a Niberdealz store, follow the safe meetup protocol and mark your order as completed." },
-      { property: "og:title", content: "Order status | Niberdealz" },
-      { property: "og:description", content: "Track your Niberdealz orders and follow the safe meetup protocol from order sent to completed." },
+      { title: "Your orders | Niberdealz" },
+      { name: "description", content: "See every order you placed on Niberdealz, what you paid, the delivery method and how far along your order is." },
+      { property: "og:title", content: "Your orders | Niberdealz" },
+      { property: "og:description", content: "Track your Niberdealz orders from placed to completed." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -19,116 +22,34 @@ export const Route = createFileRoute("/orders")({
   component: OrdersPage,
 });
 
-const STATUS_LABEL: Record<OrderStatus, string> = {
-  sent: "Order sent",
-  meetup_agreed: "Meetup agreed",
+const STATUS_LABEL: Record<string, string> = {
+  pending: "Placed, waiting for the seller",
+  confirmed: "Confirmed by the seller",
+  shipped: "On the way",
   completed: "Completed",
   cancelled: "Cancelled",
 };
 
-function StatusTrack({ status }: { status: OrderStatus }) {
-  if (status === "cancelled") {
-    return (
-      <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-destructive/10 px-3 py-1 text-xs font-semibold text-destructive">
-        <XCircle className="h-3.5 w-3.5" /> Cancelled
-      </div>
-    );
-  }
-  const idx = ORDER_STEPS.findIndex((s) => s.key === status);
-  return (
-    <ol className="mt-4 space-y-3">
-      {ORDER_STEPS.map((step, i) => {
-        const done = i <= idx;
-        return (
-          <li key={step.key} className="flex gap-3">
-            <span
-              className={`mt-0.5 h-5 w-5 shrink-0 rounded-full border-2 flex items-center justify-center ${done ? "border-[color:var(--deal)] bg-[var(--deal)] text-[color:var(--deal-foreground)]" : "border-border"}`}
-            >
-              {done && <CheckCircle2 className="h-3.5 w-3.5" />}
-            </span>
-            <div className="min-w-0">
-              <p className={`text-sm font-semibold ${done ? "" : "text-muted-foreground"}`}>{step.label}</p>
-              <p className="text-xs text-muted-foreground">{step.hint}</p>
-            </div>
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
+const PAYMENT_LABEL: Record<string, string> = {
+  unpaid: "Awaiting payment",
+  paid: "Paid",
+  refunded: "Refunded",
+};
 
-function OrderCard({ order, onStatus, onRemove }: { order: Order; onStatus: (s: OrderStatus) => void; onRemove: () => void }) {
-  const wa = (order.whatsapp_number ?? "").replace(/[^0-9]/g, "");
-  return (
-    <div className="rounded-2xl bg-card border border-border p-5 shadow-[var(--shadow-card)]">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Reference {order.id}</p>
-          <div className="flex items-center gap-2 font-semibold">
-            <Store className="h-4 w-4 text-[color:var(--deal)]" />
-            <Link to="/vendor/$id" params={{ id: order.vendor_id }} className="hover:underline">{order.vendor_name}</Link>
-          </div>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Placed {new Date(order.created_at).toLocaleString("en-ZA")}
-          </p>
-        </div>
-        <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold">{STATUS_LABEL[order.status]}</span>
-      </div>
-
-      <div className="mt-4 space-y-3">
-        {order.items.map((i, n) => (
-          <div key={`${i.product_id}-${n}`} className="flex gap-3">
-            <div className="h-16 w-16 rounded-xl overflow-hidden bg-muted shrink-0">
-              {i.image_url && <img src={i.image_url} alt={i.title} className="h-full w-full object-cover" loading="lazy" />}
-            </div>
-            <div className="min-w-0 text-sm">
-              <Link to="/product/$id" params={{ id: i.product_id }} className="font-medium hover:underline line-clamp-1">{i.title}</Link>
-              <p className="text-muted-foreground">
-                Qty {i.qty} &middot; R{Number(i.price_zar).toLocaleString("en-ZA")}
-                {i.size ? ` \u00b7 Size ${i.size}` : ""}
-                {i.color ? ` \u00b7 ${i.color}` : ""}
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-4 pt-3 border-t text-sm space-y-1">
-        <p><span className="text-muted-foreground">Buyer:</span> {order.buyer_name}</p>
-        {order.address && <p className="flex items-start gap-1.5"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />{order.address}</p>}
-        {order.tip > 0 && <p><span className="text-muted-foreground">Tip:</span> R{order.tip.toLocaleString("en-ZA")}</p>}
-        <p className="font-display text-lg font-bold">Total R{order.total.toLocaleString("en-ZA")}</p>
-      </div>
-
-      <StatusTrack status={order.status} />
-
-      <div className="mt-4 flex flex-wrap gap-2">
-        {wa && order.status !== "completed" && order.status !== "cancelled" && (
-          <Button asChild size="sm" className="bg-[#25D366] hover:bg-[#25D366]/90 text-white gap-2">
-            <a href={`https://wa.me/${wa}`} target="_blank" rel="noopener noreferrer">
-              <MessageCircle className="h-4 w-4" /> Message the seller
-            </a>
-          </Button>
-        )}
-        {order.status === "sent" && (
-          <Button size="sm" variant="outline" onClick={() => onStatus("meetup_agreed")}>We agreed on a meetup</Button>
-        )}
-        {order.status === "meetup_agreed" && (
-          <Button size="sm" onClick={() => onStatus("completed")}>I inspected it and paid</Button>
-        )}
-        {order.status !== "completed" && order.status !== "cancelled" && (
-          <Button size="sm" variant="ghost" onClick={() => onStatus("cancelled")}>Cancel order</Button>
-        )}
-        {(order.status === "completed" || order.status === "cancelled") && (
-          <Button size="sm" variant="ghost" onClick={onRemove}><Trash2 className="h-4 w-4 mr-1.5 text-destructive" />Remove</Button>
-        )}
-      </div>
-    </div>
-  );
+function money(v: unknown) {
+  return `R${Number(v ?? 0).toLocaleString("en-ZA")}`;
 }
 
 function OrdersPage() {
-  const { orders, setStatus, removeOrder } = useOrders();
+  const { user, isLoading: authLoading } = useAuth();
+  const fetchOrders = useServerFn(listMyOrders);
+  const { data, isLoading } = useQuery({
+    queryKey: ["my-orders"],
+    queryFn: () => fetchOrders(),
+    enabled: !!user,
+  });
+
+  const orders: any[] = (data as any[]) ?? [];
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -138,47 +59,74 @@ function OrdersPage() {
           <ArrowLeft className="h-4 w-4" /> Keep browsing
         </Link>
         <h1 className="font-display text-3xl font-bold flex items-center gap-2">
-          <ClipboardList className="h-7 w-7" /> Order status
+          <ClipboardList className="h-7 w-7" /> Your orders
         </h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Every order you send on WhatsApp is tracked here on this device, from order sent to completed.
+          Every order you place on the website is saved to your account with its totals, delivery method and status.
         </p>
 
-        <div className="mt-5 rounded-2xl border border-[color:var(--deal)]/40 bg-[var(--deal)]/5 p-5">
-          <h2 className="font-semibold flex items-center gap-2"><ShieldAlert className="h-5 w-5 text-[color:var(--deal)]" />Safety protocol for every order</h2>
-          <ul className="mt-2 list-disc pl-5 text-sm text-foreground/80 space-y-1">
-            <li>Never send money upfront. Pay in person, after you inspected the item and are happy with it.</li>
-            <li>Meet in a busy public place in daylight, on campus or at a mall, never at a private address you cannot verify.</li>
-            <li>Tell a friend where you are going, who you are meeting and when you will be back.</li>
-            <li>Keep the whole conversation on the WhatsApp number listed on the store, and screenshot it.</li>
-            <li>Buying far away? Ask for a live video of the item before you travel or pay anything.</li>
-            <li>Never share your ID number, banking PIN, OTP or NSFAS details with a buyer or seller.</li>
-          </ul>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button asChild size="sm" variant="outline"><Link to="/safety">Read the full safety guidelines</Link></Button>
-            <Button asChild size="sm" variant="ghost"><Link to="/contact">Report a problem</Link></Button>
+        {!authLoading && !user ? (
+          <div className="mt-8 rounded-2xl border-2 border-dashed border-border p-14 text-center">
+            <h2 className="font-display text-xl font-semibold mb-2">Sign in to see your orders</h2>
+            <p className="text-muted-foreground mb-4">Your order history is tied to your free account.</p>
+            <Button asChild><Link to="/auth" search={{ mode: "login", next: "/orders" }}>Sign in</Link></Button>
           </div>
-        </div>
-
-        {orders.length === 0 ? (
-          <div className="mt-6 rounded-2xl border-2 border-dashed border-border p-14 text-center">
+        ) : isLoading || authLoading ? (
+          <div className="mt-10 flex justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+        ) : orders.length === 0 ? (
+          <div className="mt-8 rounded-2xl border-2 border-dashed border-border p-14 text-center">
             <ClipboardList className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
             <h2 className="font-display text-xl font-semibold mb-2">No orders yet</h2>
-            <p className="text-muted-foreground mb-4">When you check out on WhatsApp, your order shows up here.</p>
+            <p className="text-muted-foreground mb-4">When you place an order it shows up here.</p>
             <Button asChild><Link to="/">Browse listings</Link></Button>
           </div>
         ) : (
           <div className="mt-6 space-y-5">
             {orders.map((o) => (
-              <OrderCard
-                key={o.id}
-                order={o}
-                onStatus={(s) => {
-                  setStatus(o.id, s);
-                  toast.success(s === "completed" ? "Order marked as completed." : s === "cancelled" ? "Order cancelled." : "Meetup noted. Stay safe out there.");
-                }}
-                onRemove={() => removeOrder(o.id)}
-              />
+              <div key={o.id} className="rounded-2xl bg-card border border-border p-5 shadow-[var(--shadow-card)]">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Reference {o.reference}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Placed {new Date(o.created_at).toLocaleString("en-ZA")}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold">{STATUS_LABEL[o.status] ?? o.status}</span>
+                    <span className="text-xs text-muted-foreground">{PAYMENT_LABEL[o.payment_status] ?? o.payment_status}</span>
+                  </div>
+                </div>
+
+                <div className="mt-4 space-y-3">
+                  {(o.order_items ?? []).map((i: any) => (
+                    <div key={i.id} className="flex gap-3">
+                      <div className="h-16 w-16 rounded-xl overflow-hidden bg-muted shrink-0">
+                        {i.image_url && <img src={i.image_url} alt={i.title} loading="lazy" className="h-full w-full object-cover" />}
+                      </div>
+                      <div className="min-w-0 text-sm">
+                        {i.product_id ? (
+                          <Link to="/product/$id" params={{ id: i.product_id }} className="font-medium hover:underline line-clamp-1">{i.title}</Link>
+                        ) : (
+                          <span className="font-medium line-clamp-1">{i.title}</span>
+                        )}
+                        <p className="text-muted-foreground">
+                          Qty {i.qty} &middot; {money(i.unit_price_zar)}
+                          {i.size ? ` \u00b7 Size ${i.size}` : ""}
+                          {i.color ? ` \u00b7 ${i.color}` : ""}
+                        </p>
+                        {i.comment && <p className="text-xs text-muted-foreground">Note: {i.comment}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-4 pt-3 border-t text-sm space-y-1">
+                  <p className="flex items-center gap-1.5"><Truck className="h-4 w-4 text-muted-foreground" />{deliveryLabel(o.delivery_method)}{o.delivery_days ? ` \u00b7 about ${o.delivery_days} day${o.delivery_days === 1 ? "" : "s"}` : ""}</p>
+                  {o.delivery_address && <p className="flex items-start gap-1.5"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />{o.delivery_address}</p>}
+                  <p><span className="text-muted-foreground">Items:</span> {money(o.subtotal_zar)}</p>
+                  {Number(o.discount_zar) > 0 && <p className="text-success"><span className="text-muted-foreground">Discount:</span> {money(o.discount_zar)}{o.coupon_code ? ` (code ${o.coupon_code})` : ""}</p>}
+                  {Number(o.delivery_fee_zar) > 0 && <p><span className="text-muted-foreground">Delivery:</span> {money(o.delivery_fee_zar)}</p>}
+                  <p className="font-display text-lg font-bold">Total {money(o.total_zar)}</p>
+                </div>
+              </div>
             ))}
           </div>
         )}
