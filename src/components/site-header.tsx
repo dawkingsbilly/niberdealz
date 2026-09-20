@@ -1,6 +1,6 @@
 import { Link, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
-import { LogOut, LayoutDashboard, ShieldCheck, Crown, ShieldAlert, Lock, Menu, MessageCircle, Mail, Home, LogIn, Store, Search, ShoppingCart, ClipboardList } from "lucide-react";
+import { LogOut, LayoutDashboard, ShieldCheck, Crown, ShieldAlert, Lock, Menu, MessageCircle, Mail, Home, LogIn, Store, Search, ShoppingCart, ClipboardList, Share2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -147,7 +147,8 @@ export function SiteHeader() {
                   </Link>
                 </SheetClose>
                 <MenuLink to="/cart" icon={ShoppingCart} label="Your cart" />
-                <MenuLink to="/orders" icon={ClipboardList} label="Order status" />
+                <MenuLink to="/orders" icon={ClipboardList} label="Your orders" />
+                <MenuLink to="/affiliate" icon={Share2} label="Affiliate programme" />
 
                 <MenuLink to="/safety" icon={ShieldAlert} label="Safety guidelines" />
                 <MenuLink to="/contact" icon={Mail} label="Contact us" />
@@ -229,7 +230,8 @@ export function SiteFooter() {
           <h4 className="font-semibold mb-3 text-foreground">Support</h4>
           <ul className="space-y-2 text-muted-foreground">
             <li><Link to="/safety" className="hover:text-foreground transition"><span className="inline-flex items-center gap-1"><ShieldAlert className="h-3.5 w-3.5" />Safety guidelines</span></Link></li>
-            <li><Link to="/orders" className="hover:text-foreground transition">Order status</Link></li>
+            <li><Link to="/orders" className="hover:text-foreground transition">Your orders</Link></li>
+            <li><Link to="/affiliate" className="hover:text-foreground transition">Affiliate programme</Link></li>
             <li><Link to="/contact" className="hover:text-foreground transition">Contact us</Link></li>
 
           </ul>

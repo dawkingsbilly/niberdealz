@@ -16,6 +16,8 @@ import { adminDeleteProduct, ownerDeleteVendor, ownerListUsers, promoteToRole, s
 import { ThemesTab } from "@/components/admin/themes-tab";
 import { PaymentsTab } from "@/components/admin/payments-tab";
 import { VerificationTab } from "@/components/admin/verification-tab";
+import { OrdersTab } from "@/components/admin/orders-tab";
+import { PayoutsTab } from "@/components/admin/payouts-tab";
 import { socialUrl } from "@/lib/socials";
 
 export const Route = createFileRoute("/_authenticated/admin")({ component: Admin });
@@ -23,7 +25,7 @@ export const Route = createFileRoute("/_authenticated/admin")({ component: Admin
 function Admin() {
   const { user, roles, isLoading } = useAuth();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<"overview" | "approvals" | "verification" | "listings" | "stores" | "payments" | "sales" | "themes" | "broadcasts" | "reports" | "users" | "admins">("overview");
+  const [tab, setTab] = useState<"overview" | "approvals" | "verification" | "listings" | "orders" | "payouts" | "stores" | "payments" | "sales" | "themes" | "broadcasts" | "reports" | "users" | "admins">("overview");
 
   const isAdmin = roles.includes("admin");
   const isOwner = roles.includes("owner");
@@ -40,8 +42,8 @@ function Admin() {
   }
 
   const tabs = isOwner
-    ? (["overview", "approvals", "verification", "listings", "stores", "payments", "sales", "themes", "broadcasts", "reports", "users", "admins"] as const)
-    : (["overview", "approvals", "verification", "listings", "payments", "reports"] as const);
+    ? (["overview", "approvals", "verification", "listings", "orders", "payouts", "stores", "payments", "sales", "themes", "broadcasts", "reports", "users", "admins"] as const)
+    : (["overview", "approvals", "verification", "listings", "orders", "payouts", "payments", "reports"] as const);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -73,6 +75,8 @@ function Admin() {
         {tab === "approvals" && <ApprovalsTab qc={qc} />}
         {tab === "verification" && <VerificationTab />}
         {tab === "listings" && <ListingsTab qc={qc} />}
+        {tab === "orders" && <OrdersTab />}
+        {tab === "payouts" && <PayoutsTab />}
         {tab === "stores" && isOwner && <StoresTab qc={qc} />}
         {tab === "payments" && <PaymentsTab />}
         {tab === "sales" && isOwner && <SalesTab qc={qc} />}
