@@ -16,6 +16,8 @@ import { CATEGORIES } from "@/lib/constants";
 import { PromotionsCard, PromoPopup } from "@/components/vendor/promotions-card";
 import { VendorAnalyticsCard } from "@/components/vendor/analytics-card";
 import { VerificationCard } from "@/components/vendor/verification-card";
+import { DeliveryCard } from "@/components/vendor/delivery-card";
+import { VendorOrdersCard } from "@/components/vendor/orders-card";
 import { submitProduct, setProductSold, updateProduct, acknowledgeWarning, updateVendorProfile, respondToCampaign } from "@/lib/marketplace.functions";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({ component: Dashboard });
@@ -218,6 +220,8 @@ function Dashboard() {
         {vendor.status === "approved" && (
           <>
             <VerificationCard vendor={vendor} userId={user!.id} />
+            <div className="mb-6"><VendorOrdersCard /></div>
+            <div className="mb-6"><DeliveryCard products={products as any[]} /></div>
             <div id="promote-anchor" />
             <PromotionsCard vendor={vendor} userId={user!.id} />
             <VendorAnalyticsCard userId={user!.id} />
