@@ -37,7 +37,7 @@ export function pointsToZar(points: number): number {
 }
 
 export function levelFor(lifetimePoints: number) {
-  let current = LEVELS[0];
+  let current: { level: number; name: string; points: number; commissionPct: number } = LEVELS[0];
   for (const l of LEVELS) if (lifetimePoints >= l.points) current = l;
   const next = LEVELS.find((l) => l.points > lifetimePoints) ?? null;
   const span = next ? next.points - current.points : 0;
