@@ -75,6 +75,12 @@ export const placeOrder = createServerFn({ method: "POST" })
     // Delivery fee comes from the seller's own options on the first product.
     const options: any[] = Array.isArray(products[0]?.delivery_options) ? products[0].delivery_options : [];
     const chosen = options.find((o: any) => o?.method === data.delivery_method);
+    if (options.length > 0 && !chosen) {
+      throw new Error("The seller does not offer that delivery option.");
+    }
+    if (options.length === 0 && data.delivery_method !== "meetup" && data.delivery_method !== "pickup") {
+      throw new Error("The seller has not set a shipping price yet. Choose meetup or pickup, or ask the seller to add delivery.");
+    }
     const deliveryFee = Number(chosen?.fee_zar ?? 0);
     const deliveryDays = chosen?.days != null ? Number(chosen.days) : null;
 
