@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_log: {
+        Row: {
+          action: string
+          actor_email: string
+          actor_id: string | null
+          created_at: string
+          details: Json
+          id: string
+          object_id: string
+          object_type: string
+        }
+        Insert: {
+          action: string
+          actor_email?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json
+          id?: string
+          object_id?: string
+          object_type?: string
+        }
+        Update: {
+          action?: string
+          actor_email?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json
+          id?: string
+          object_id?: string
+          object_type?: string
+        }
+        Relationships: []
+      }
       affiliate_payouts: {
         Row: {
           affiliate_id: string
@@ -485,6 +518,7 @@ export type Database = {
         Row: {
           ai_review_notes: string | null
           ai_risk_score: number | null
+          brand: string | null
           category: string
           checkout_url: string | null
           color: string | null
@@ -494,12 +528,17 @@ export type Database = {
           id: string
           image_url: string | null
           images: string[]
+          is_active: boolean
+          is_featured: boolean
           is_sold: boolean
           price_zar: number
           rejection_reason: string | null
+          sale_price_zar: number | null
           size: string | null
+          sku: string | null
           status: Database["public"]["Enums"]["product_status"]
           stock: number | null
+          tags: string[]
           title: string
           updated_at: string
           vendor_id: string
@@ -507,6 +546,7 @@ export type Database = {
         Insert: {
           ai_review_notes?: string | null
           ai_risk_score?: number | null
+          brand?: string | null
           category: string
           checkout_url?: string | null
           color?: string | null
@@ -516,12 +556,17 @@ export type Database = {
           id?: string
           image_url?: string | null
           images?: string[]
+          is_active?: boolean
+          is_featured?: boolean
           is_sold?: boolean
           price_zar: number
           rejection_reason?: string | null
+          sale_price_zar?: number | null
           size?: string | null
+          sku?: string | null
           status?: Database["public"]["Enums"]["product_status"]
           stock?: number | null
+          tags?: string[]
           title: string
           updated_at?: string
           vendor_id: string
@@ -529,6 +574,7 @@ export type Database = {
         Update: {
           ai_review_notes?: string | null
           ai_risk_score?: number | null
+          brand?: string | null
           category?: string
           checkout_url?: string | null
           color?: string | null
@@ -538,12 +584,17 @@ export type Database = {
           id?: string
           image_url?: string | null
           images?: string[]
+          is_active?: boolean
+          is_featured?: boolean
           is_sold?: boolean
           price_zar?: number
           rejection_reason?: string | null
+          sale_price_zar?: number | null
           size?: string | null
+          sku?: string | null
           status?: Database["public"]["Enums"]["product_status"]
           stock?: number | null
+          tags?: string[]
           title?: string
           updated_at?: string
           vendor_id?: string
@@ -720,6 +771,33 @@ export type Database = {
         }
         Relationships: []
       }
+      store_categories: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       store_reviews: {
         Row: {
           comment: string
@@ -754,6 +832,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      store_settings: {
+        Row: {
+          created_at: string
+          house_vendor_id: string
+          id: boolean
+          support_whatsapp: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          house_vendor_id: string
+          id?: boolean
+          support_whatsapp?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          house_vendor_id?: string
+          id?: boolean
+          support_whatsapp?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
