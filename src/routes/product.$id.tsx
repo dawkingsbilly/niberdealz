@@ -10,7 +10,7 @@ import { addToCart } from "@/lib/cart";
 
 export const Route = createFileRoute("/product/$id")({
   loader: async ({ params }) => { const { data } = await supabase.from("products").select("id,title,description,price_zar,sale_price_zar,image_url,category,brand,is_active,status").eq("id", params.id).eq("status", "approved").eq("is_active", true).maybeSingle(); return { seed: data as any }; },
-  head: ({ params, loaderData }) => { const p: any = loaderData?.seed; const url = `https://niberdealz.lovable.app/product/${params.id}`; const title = p ? `${p.title} | NiberDealz` : "Product | NiberDealz"; return { meta: [{ title }, { name: "description", content: p?.description?.slice(0, 155) ?? "Shop directly from NiberDealz." }, { property: "og:type", content: "product" }, { property: "og:url", content: url }, ...(p?.image_url ? [{ property: "og:image", content: p.image_url }] : [])], links: [{ rel: "canonical", href: url }] }; },
+  head: ({ params, loaderData }) => { const p: any = loaderData?.seed; const url = `https://www.niberdealz.co.za/product/${params.id}`; const title = p ? `${p.title} | NiberDealz` : "Product | NiberDealz"; return { meta: [{ title }, { name: "description", content: p?.description?.slice(0, 155) ?? "Shop directly from NiberDealz." }, { property: "og:type", content: "product" }, { property: "og:url", content: url }, ...(p?.image_url ? [{ property: "og:image", content: p.image_url }] : [])], links: [{ rel: "canonical", href: url }] }; },
   component: ProductDetail,
 });
 function ProductDetail() {

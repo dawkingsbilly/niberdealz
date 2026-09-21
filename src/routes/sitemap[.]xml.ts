@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 
-const BASE_URL = "https://niberdealz.lovable.app";
+const BASE_URL = "https://www.niberdealz.co.za";
 
 interface SitemapEntry {
   path: string;

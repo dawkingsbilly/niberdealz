@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://niberdealz.lovable.app/sitemap.xml
+Sitemap: https://www.niberdealz.co.za/sitemap.xml
