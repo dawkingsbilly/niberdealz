@@ -77,7 +77,7 @@ ALTER TABLE public.store_settings
   ADD COLUMN IF NOT EXISTS support_email text NOT NULL DEFAULT '',
   ADD COLUMN IF NOT EXISTS delivery_note text NOT NULL DEFAULT 'Delivery options are confirmed at checkout.',
   ADD COLUMN IF NOT EXISTS default_delivery_fee_zar numeric(10,2) NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS payment_provider text NOT NULL DEFAULT 'Peach Payments',
+  ADD COLUMN IF NOT EXISTS payment_provider text NOT NULL DEFAULT 'Not configured',
   ADD COLUMN IF NOT EXISTS payment_mode text NOT NULL DEFAULT 'pending' CHECK (payment_mode IN ('pending', 'live', 'test'));
 
 -- Do not expose internal store configuration to the public client.
