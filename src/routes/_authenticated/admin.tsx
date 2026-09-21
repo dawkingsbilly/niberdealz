@@ -9,6 +9,7 @@ import {
   Check,
   Clipboard,
   Crown,
+  Download,
   Eye,
   Loader2,
   PackageCheck,
@@ -33,6 +34,7 @@ import {
   saveProduct,
   updateManualFulfilment,
   updateOrderFulfillment,
+  exportTeemDropOrder,
 } from "@/lib/ecommerce.functions";
 import { ProductImageUploader } from "@/components/product-image-uploader";
 import { suggestProductCopy } from "@/lib/ai.functions";
@@ -189,7 +191,7 @@ function Products() {
       const { data, error } = await supabase
         .from("products")
         .select(
-          "id,title,description,price_zar,sale_price_zar,category,brand,sku,stock,image_url,images,is_featured,is_new_arrival,is_best_seller,is_active,product_supplier_sources(source_url,original_price_zar,supplier_name)",
+          "id,title,description,price_zar,sale_price_zar,category,brand,sku,stock,image_url,images,is_featured,is_new_arrival,is_best_seller,is_active,product_supplier_sources(source_url,original_price_zar,supplier_name,supplier_sku,teemdrop_sa_fulfilment_verified_at)",
         )
         .order("created_at", { ascending: false })
         .limit(200);
@@ -299,6 +301,8 @@ function ProductForm({ product, onDone, save }: { product: any; onDone: () => vo
     supplier_name: source?.supplier_name ?? "",
     supplier_source_url: source?.source_url ?? "",
     supplier_original_price_zar: String(source?.original_price_zar ?? ""),
+    supplier_sku: source?.supplier_sku ?? "",
+    teemdrop_sa_fulfilment_verified: Boolean(source?.teemdrop_sa_fulfilment_verified_at),
   });
   const supplierCost = Number(form.supplier_original_price_zar);
   const calculatedPrice =
@@ -366,6 +370,8 @@ function ProductForm({ product, onDone, save }: { product: any; onDone: () => vo
           supplier_original_price_zar: form.supplier_original_price_zar
             ? Number(form.supplier_original_price_zar)
             : null,
+          supplier_sku: form.supplier_sku,
+          teemdrop_sa_fulfilment_verified: form.teemdrop_sa_fulfilment_verified,
         },
       });
       toast.success(product.id ? "Product updated" : "Product added");
@@ -411,6 +417,24 @@ function ProductForm({ product, onDone, save }: { product: any; onDone: () => vo
       </div>
       {field("supplier_name", "Supplier name (private)")}
       {field("supplier_original_price_zar", "Supplier cost (R, private)", "number")}
+      {field("supplier_sku", "TeemDrop SKU (private)")}
+      <label className="flex items-start gap-2 rounded-lg border p-3 text-sm">
+        <input
+          type="checkbox"
+          className="mt-0.5"
+          checked={form.teemdrop_sa_fulfilment_verified}
+          onChange={(event) =>
+            setForm({ ...form, teemdrop_sa_fulfilment_verified: event.target.checked })
+          }
+        />
+        <span>
+          <span className="block font-medium">South Africa fulfilment verified</span>
+          <span className="text-xs text-muted-foreground">
+            Confirm current stock, delivery terms and South Africa availability in TeemDrop before
+            enabling supplier export.
+          </span>
+        </span>
+      </label>
       <div className="md:col-span-2">
         {field("supplier_source_url", "Supplier product link (private)")}
       </div>
@@ -455,6 +479,7 @@ function Fulfilment() {
   const getQueue = useServerFn(listFulfilmentQueue);
   const setFulfilment = useServerFn(updateManualFulfilment);
   const setOrder = useServerFn(updateOrderFulfillment);
+  const exportTeemDrop = useServerFn(exportTeemDropOrder);
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["ceo-fulfilment"],
     queryFn: () => getQueue({ data: undefined as any }),
@@ -470,16 +495,36 @@ function Fulfilment() {
     }
   };
   const changeOrder = async (id: string, status: string) => {
-    if (
-      status === "paid" &&
-      !confirm(
-        "Confirm payment has been independently verified. This may apply an eligible shipping promotion.",
-      )
-    )
-      return;
     try {
       await setOrder({ data: { id, status } });
       toast.success("Order status updated");
+      refresh();
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+  const downloadTeemDrop = async (order: any) => {
+    try {
+      const result = await exportTeemDrop({ data: { id: order.id } });
+      const binary = atob(result.workbook_base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let index = 0; index < binary.length; index += 1)
+        bytes[index] = binary.charCodeAt(index);
+      const url = URL.createObjectURL(
+        new Blob([bytes], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        }),
+      );
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = result.filename;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.success(
+        result.already_prepared
+          ? "Downloaded the existing audited TeemDrop file"
+          : "TeemDrop file prepared for manual upload",
+      );
       refresh();
     } catch (error: any) {
       toast.error(error.message);
@@ -513,10 +558,21 @@ function Fulfilment() {
       <div>
         <h2 className="font-display text-2xl font-bold">Manual fulfilment</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Review each paid order, place it manually with the supplier, then keep its audit trail
-          current.
+          Approve each order request internally, prepare a TeemDrop file only when supplier checks
+          pass, then keep its audit trail current. Payments stay disabled.
         </p>
       </div>
+      <aside className="mt-5 rounded-xl border border-amber-300/60 bg-amber-50/60 p-4 text-sm dark:bg-amber-950/20">
+        <p className="font-semibold">TeemDrop connection options</p>
+        <p className="mt-1 text-muted-foreground">
+          TeemDrop lists direct connectors for Shopify, WooCommerce, eBay and Wix. NiberDealz is a
+          custom storefront, so none is authorised here.
+        </p>
+        <p className="mt-2 text-muted-foreground">
+          Use the CEO-reviewed TeemDrop XLSX download and the official manual import workflow until
+          TeemDrop confirms a supported custom-store route.
+        </p>
+      </aside>
       <div className="mt-6 space-y-4">
         {orders.length === 0 ? (
           <p className="rounded-xl border bg-card p-6 text-sm text-muted-foreground">
@@ -533,10 +589,30 @@ function Fulfilment() {
                     {Number(order.total_zar).toLocaleString("en-ZA", { minimumFractionDigits: 2 })}
                   </p>
                 </div>
-                <Button size="sm" variant="outline" onClick={() => copy(order)}>
-                  <Clipboard className="mr-1.5 h-4 w-4" />
-                  Copy summary
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" onClick={() => copy(order)}>
+                    <Clipboard className="mr-1.5 h-4 w-4" />
+                    Copy summary
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={
+                      order.status !== "processing" ||
+                      order.fulfilment_status !== "Pending Fulfilment" ||
+                      (order.teemdrop_order_exports ?? []).length > 0
+                    }
+                    onClick={() => downloadTeemDrop(order)}
+                    title={
+                      (order.teemdrop_order_exports ?? []).length > 0
+                        ? "This supplier file has already been prepared. Contact the CEO before any replacement export."
+                        : "Requires processing status, verified TeemDrop SKU, verified South Africa fulfilment, and a pipe-separated courier address."
+                    }
+                  >
+                    <Download className="mr-1.5 h-4 w-4" />
+                    TeemDrop XLSX
+                  </Button>
+                </div>
               </div>
               <div className="mt-4 grid gap-3 rounded-lg bg-secondary/60 p-3 text-sm md:grid-cols-2">
                 <div>
@@ -606,7 +682,6 @@ function Fulfilment() {
                     onChange={(e) => changeOrder(order.id, e.target.value)}
                   >
                     <option value="pending">Pending</option>
-                    <option value="paid">Paid</option>
                     <option value="processing">Processing</option>
                     <option value="shipped">Shipped</option>
                     <option value="delivered">Delivered</option>

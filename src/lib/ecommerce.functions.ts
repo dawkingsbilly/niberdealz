@@ -2,6 +2,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { bytesToBase64, createTeemDropXlsx } from "@/lib/teemdrop-xlsx";
 
 const SUPPLIER_MARKUP = 1.4;
 const sellingPriceFromSupplierCost = (cost: number) =>
@@ -35,6 +36,8 @@ const productInput = z.object({
   supplier_source_url: z.string().url(),
   supplier_original_price_zar: z.number().positive(),
   supplier_name: z.string().trim().min(2).max(160),
+  supplier_sku: z.string().trim().max(160).optional().default(""),
+  teemdrop_sa_fulfilment_verified: z.boolean().optional().default(false),
 });
 
 async function authorize(context: any, required: "staff" | "ceo") {
@@ -116,6 +119,10 @@ export const saveProduct = createServerFn({ method: "POST" })
       source_url: data.supplier_source_url || "",
       original_price_zar: data.supplier_original_price_zar,
       supplier_name: data.supplier_name,
+      supplier_sku: data.supplier_sku || null,
+      teemdrop_sa_fulfilment_verified_at: data.teemdrop_sa_fulfilment_verified
+        ? new Date().toISOString()
+        : null,
       updated_at: new Date().toISOString(),
       updated_by: context.userId,
     };
@@ -164,15 +171,7 @@ export const updateOrderFulfillment = createServerFn({ method: "POST" })
     z
       .object({
         id: z.string().uuid(),
-        status: z.enum([
-          "pending",
-          "paid",
-          "processing",
-          "shipped",
-          "delivered",
-          "cancelled",
-          "refunded",
-        ]),
+        status: z.enum(["pending", "processing", "shipped", "delivered", "cancelled", "refunded"]),
       })
       .parse(d),
   )
@@ -247,6 +246,136 @@ export const updateManualFulfilment = createServerFn({ method: "POST" })
     });
   });
 
+const TEEMDROP_ADDRESS_FORMAT =
+  "Address line 1 | Address line 2 (optional) | City | State / province | Postal code";
+
+function parseTeemDropAddress(value: string) {
+  const parts = value.split("|").map((part) => part.trim());
+  if (parts.length === 4) {
+    const [address1, city, state, postalCode] = parts;
+    return { address1, address2: "", city, state, postalCode };
+  }
+  if (parts.length === 5) {
+    const [address1, address2, city, state, postalCode] = parts;
+    return { address1, address2, city, state, postalCode };
+  }
+  return null;
+}
+
+/**
+ * CEO-only, idempotent manual export. It uses the header schema verified against the
+ * official TeemDrop template, but never uploads customer data or marks an order placed.
+ */
+export const exportTeemDropOrder = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { db } = await authorize(context, "ceo");
+    const { data: order, error } = await db
+      .from("orders")
+      .select(
+        "id,reference,created_at,buyer_name,buyer_phone,delivery_method,delivery_address,status,fulfilment_status,order_items(id,title,qty,size,color,unit_price_zar,order_item_supplier_sources(supplier_name,supplier_sku,teemdrop_sa_fulfilment_verified_at))",
+      )
+      .eq("id", data.id)
+      .maybeSingle();
+    if (error || !order) throw new Error("Order not found.");
+    if (order.status !== "processing")
+      throw new Error(
+        "Move the order to Processing after internal approval before preparing a supplier file.",
+      );
+    if (order.fulfilment_status !== "Pending Fulfilment")
+      throw new Error(
+        "This order has already progressed in fulfilment and cannot be exported again.",
+      );
+    if (order.delivery_method !== "courier")
+      throw new Error(
+        "TeemDrop export currently supports verified courier addresses only, not pickup or PAXI orders.",
+      );
+
+    const address = parseTeemDropAddress(order.delivery_address ?? "");
+    if (
+      !address ||
+      !Object.values(address)
+        .filter((value, index) => index !== 1)
+        .every(Boolean)
+    )
+      throw new Error(`Enter the delivery address as: ${TEEMDROP_ADDRESS_FORMAT}.`);
+    const name = String(order.buyer_name ?? "")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (name.length < 2)
+      throw new Error("A customer first and last name are required for TeemDrop export.");
+    const items = Array.isArray(order.order_items) ? order.order_items : [];
+    if (items.length === 0) throw new Error("This order has no items to export.");
+
+    const rows = items.map((item: any) => {
+      const source = Array.isArray(item.order_item_supplier_sources)
+        ? item.order_item_supplier_sources[0]
+        : item.order_item_supplier_sources;
+      if (source?.supplier_name?.trim().toLowerCase() !== "teemdrop")
+        throw new Error(`"${item.title}" is not recorded as a TeemDrop-supplied item.`);
+      if (!source?.supplier_sku || !source?.teemdrop_sa_fulfilment_verified_at)
+        throw new Error(
+          `"${item.title}" needs a verified TeemDrop SKU and South Africa fulfilment check before export.`,
+        );
+      return [
+        "NiberDealz",
+        "NiberDealz",
+        String(order.created_at).slice(0, 10),
+        order.reference,
+        source.supplier_sku,
+        String(item.unit_price_zar ?? ""),
+        String(item.qty),
+        name[0],
+        name.slice(1).join(" "),
+        order.buyer_phone,
+        address.address1,
+        address.address2,
+        address.city,
+        address.state,
+        address.postalCode,
+        "ZA",
+        "",
+        "",
+        "",
+      ];
+    });
+
+    const { data: existing, error: existingError } = await db
+      .from("teemdrop_order_exports")
+      .select("id")
+      .eq("order_id", order.id)
+      .maybeSingle();
+    if (existingError) throw new Error("Unable to verify the supplier-export audit record.");
+    let preparedNow = false;
+    if (!existing) {
+      const exportKey = `teemdrop:${order.id}:v1`;
+      const { error: auditError } = await db.from("teemdrop_order_exports").insert({
+        order_id: order.id,
+        export_key: exportKey,
+        exported_by: context.userId,
+        row_count: rows.length,
+      });
+      // A concurrent click may have already created this immutable audit record.
+      if (auditError && auditError.code !== "23505")
+        throw new Error("Unable to record the supplier export. Nothing was downloaded.");
+      preparedNow = !auditError;
+      if (preparedNow) {
+        await audit(db, context, "teemdrop_xlsx_prepared", "order", order.id, {
+          reference: order.reference,
+          row_count: rows.length,
+        });
+      }
+    }
+
+    return {
+      filename: `niberdealz-teemdrop-${order.reference}.xlsx`,
+      workbook_base64: bytesToBase64(createTeemDropXlsx(rows)),
+      already_prepared: !preparedNow,
+    };
+  });
+
 export const listFulfilmentQueue = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -254,7 +383,7 @@ export const listFulfilmentQueue = createServerFn({ method: "POST" })
     const { data, error } = await db
       .from("orders")
       .select(
-        "id,reference,created_at,buyer_name,buyer_phone,delivery_method,delivery_tier,paxi_pickup_point,delivery_address,note,total_zar,payment_status,status,fulfilment_status,order_items(id,title,qty,size,color,comment,order_item_supplier_sources(source_url,original_price_zar,supplier_name))",
+        "id,reference,created_at,buyer_name,buyer_phone,delivery_method,delivery_tier,paxi_pickup_point,delivery_address,note,total_zar,payment_status,status,fulfilment_status,teemdrop_order_exports(id,exported_at),order_items(id,title,qty,size,color,comment,order_item_supplier_sources(source_url,original_price_zar,supplier_name,supplier_sku,teemdrop_sa_fulfilment_verified_at))",
       )
       .order("created_at", { ascending: false })
       .limit(100);
