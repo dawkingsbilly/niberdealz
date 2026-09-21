@@ -2,7 +2,16 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { ArrowLeft, CheckCircle2, Loader2, ShoppingCart, Trash2, Truck, UserPlus } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Loader2,
+  MapPin,
+  ShoppingCart,
+  Trash2,
+  Truck,
+  UserPlus,
+} from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { SiteHeader, SiteFooter } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
@@ -13,27 +22,422 @@ import { useCart, type CartItem } from "@/lib/cart";
 import { createNiberDealzOrder } from "@/lib/ecommerce.functions";
 
 export const Route = createFileRoute("/cart")({
-  head: () => ({ meta: [{ title: "Checkout | NiberDealz" }, { name: "description", content: "Securely place your NiberDealz order." }] }), component: CartPage,
+  head: () => ({
+    meta: [
+      { title: "Checkout | NiberDealz" },
+      {
+        name: "description",
+        content: "Place a NiberDealz order with delivery pricing shown upfront.",
+      },
+    ],
+  }),
+  component: CartPage,
 });
+type DeliveryTier =
+  | "courier"
+  | "paxi_standard_5kg"
+  | "paxi_express_5kg"
+  | "paxi_standard_10kg"
+  | "paxi_express_10kg";
+const tierInfo: Record<DeliveryTier, { label: string; fee: number; detail: string }> = {
+  courier: { label: "Courier", fee: 150, detail: "Door-to-door delivery" },
+  paxi_standard_5kg: {
+    label: "PAXI Standard · up to 5kg",
+    fee: 59.95,
+    detail: "7–9 business days",
+  },
+  paxi_express_5kg: { label: "PAXI Express · up to 5kg", fee: 109.95, detail: "3–5 business days" },
+  paxi_standard_10kg: {
+    label: "PAXI Standard · up to 10kg",
+    fee: 109.95,
+    detail: "7–9 business days",
+  },
+  paxi_express_10kg: {
+    label: "PAXI Express · up to 10kg",
+    fee: 139.95,
+    detail: "3–5 business days",
+  },
+};
+const money = (value: number) =>
+  `R${value.toLocaleString("en-ZA", { minimumFractionDigits: value % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
 
 function CartPage() {
-  const { user } = useAuth(); const navigate = useNavigate();
+  const { user, session } = useAuth();
+  const navigate = useNavigate();
   const { items, count, total, setQty, setComment, remove, clear, lineKey } = useCart();
-  const [buyerName, setBuyerName] = useState(""); const [buyerPhone, setBuyerPhone] = useState(""); const [address, setAddress] = useState(""); const [note, setNote] = useState(""); const [coupon, setCoupon] = useState("");
-  const [method, setMethod] = useState<"courier" | "paxi" | "pickup">("courier"); const [placing, setPlacing] = useState(false); const [confirmation, setConfirmation] = useState<{ reference: string; total: number } | null>(null);
+  const [buyerName, setBuyerName] = useState("");
+  const [buyerPhone, setBuyerPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [note, setNote] = useState("");
+  const [coupon, setCoupon] = useState("");
+  const [method, setMethod] = useState<"courier" | "paxi" | "pickup">("courier");
+  const [tier, setTier] = useState<DeliveryTier>("courier");
+  const [pickupPoint, setPickupPoint] = useState("");
+  const [accepted, setAccepted] = useState(false);
+  const [placing, setPlacing] = useState(false);
+  const [confirmation, setConfirmation] = useState<{
+    reference: string;
+    total: number;
+    checkoutUrl?: string;
+  } | null>(null);
   const placeOrder = useServerFn(createNiberDealzOrder);
+  const selected = tierInfo[tier];
+  const displayedFee = method === "pickup" ? 0 : selected.fee;
+  const chooseMethod = (value: "courier" | "paxi" | "pickup") => {
+    setMethod(value);
+    if (value === "courier") setTier("courier");
+    if (value === "paxi" && tier === "courier") setTier("paxi_standard_5kg");
+  };
   const submit = async () => {
-    if (!user) { toast.error("Please sign in to continue to checkout."); navigate({ to: "/auth", search: { mode: "register", next: "/cart" } }); return; }
-    if (!items.length) return; if (!buyerName.trim() || !buyerPhone.trim()) { toast.error("Add your name and contact number."); return; }
-    if (method !== "pickup" && !address.trim()) { toast.error("Add a delivery address."); return; }
+    if (!user) {
+      toast.error("Please sign in to continue to checkout.");
+      navigate({ to: "/auth", search: { mode: "register", next: "/cart" } });
+      return;
+    }
+    if (!items.length) return;
+    if (!buyerName.trim() || !buyerPhone.trim()) {
+      toast.error("Add your name and contact number.");
+      return;
+    }
+    if (method !== "pickup" && !address.trim()) {
+      toast.error("Add a delivery address.");
+      return;
+    }
+    if (method === "paxi" && pickupPoint.trim().length < 3) {
+      toast.error("Enter your selected PAXI pickup point.");
+      return;
+    }
+    if (!accepted) {
+      toast.error("Please accept the Terms and Privacy Policy.");
+      return;
+    }
     setPlacing(true);
     try {
-      const result: any = await placeOrder({ items: items.map((item) => ({ product_id: item.product_id, qty: item.qty, size: item.size, color: item.color, comment: item.comment })), buyer_name: buyerName, buyer_phone: buyerPhone, delivery_method: method, delivery_address: address, note, discount_code: coupon });
-      if (!result?.order_id) throw new Error("We could not create your order. Please try again.");
-      clear(); setConfirmation({ reference: result.reference, total: Number(result.total_zar) });
-    } catch (error: any) { toast.error(error.message ?? "Could not place order."); } finally { setPlacing(false); }
+      const result = (await placeOrder({
+        items: items.map((item) => ({
+          product_id: item.product_id,
+          qty: item.qty,
+          size: item.size,
+          color: item.color,
+          comment: item.comment,
+        })),
+        buyer_name: buyerName,
+        buyer_phone: buyerPhone,
+        delivery_method: method,
+        delivery_address: address,
+        note,
+        discount_code: coupon,
+        delivery_tier: method === "pickup" ? "pickup" : tier,
+        paxi_pickup_point: pickupPoint,
+        terms_version: "2026-09",
+      })) as {
+        order_id?: string;
+        reference: string;
+        total_zar: number | string;
+      };
+      if (!result.order_id) throw new Error("We could not create your order. Please try again.");
+      // Payment collection is deliberately disabled until the Yoco release is validated.
+      // Orders remain subject to stock and manual fulfilment confirmation.
+      clear();
+      setConfirmation({
+        reference: result.reference,
+        total: Number(result.total_zar),
+      });
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Could not place order.");
+    } finally {
+      setPlacing(false);
+    }
   };
-  if (confirmation) return <div className="min-h-screen flex flex-col"><SiteHeader /><main className="container mx-auto max-w-xl px-4 py-16 flex-1 text-center"><CheckCircle2 className="mx-auto h-14 w-14 text-emerald-600" /><h1 className="font-display mt-4 text-3xl font-bold">Order received</h1><p className="mt-3 text-muted-foreground">Your NiberDealz order <strong className="text-foreground">{confirmation.reference}</strong> has been received. We’ll send your secure payment instructions before fulfilment.</p><p className="font-display mt-4 text-2xl font-bold">R{confirmation.total.toLocaleString("en-ZA")}</p><div className="mt-8 flex justify-center gap-3"><Button asChild variant="outline"><Link to="/orders">View orders</Link></Button><Button asChild><Link to="/">Continue shopping</Link></Button></div></main><SiteFooter /></div>;
-  return <div className="min-h-screen flex flex-col"><SiteHeader /><main className="container mx-auto max-w-6xl px-4 py-8 flex-1"><Button asChild variant="ghost" size="sm" className="mb-4 -ml-2"><Link to="/"><ArrowLeft className="mr-1 h-4 w-4" />Continue shopping</Link></Button><h1 className="font-display text-3xl font-bold">Your cart</h1>{items.length === 0 ? <div className="mt-8 rounded-2xl border border-dashed p-14 text-center"><ShoppingCart className="mx-auto h-10 w-10 text-muted-foreground" /><h2 className="mt-3 font-display text-xl font-bold">Your cart is empty</h2><Button asChild className="mt-5"><Link to="/">Shop NiberDealz</Link></Button></div> : <div className="mt-6 grid gap-7 lg:grid-cols-[1fr_380px]"><section className="space-y-3">{items.map((item) => <CartLine key={lineKey(item)} item={item} onQty={(qty) => setQty(lineKey(item), qty)} onComment={(value) => setComment(lineKey(item), value)} onRemove={() => remove(lineKey(item))} />)}</section><aside className="rounded-2xl border bg-card p-5 h-fit"><h2 className="font-display text-xl font-bold">Checkout</h2><div className="mt-4 grid gap-3"><div><Label htmlFor="name">Full name</Label><Input id="name" value={buyerName} onChange={(e) => setBuyerName(e.target.value)} /></div><div><Label htmlFor="phone">Contact number</Label><Input id="phone" inputMode="tel" value={buyerPhone} onChange={(e) => setBuyerPhone(e.target.value)} /></div><div><Label>Delivery</Label><div className="mt-2 grid grid-cols-3 gap-2">{(["courier", "paxi", "pickup"] as const).map((option) => <button key={option} onClick={() => setMethod(option)} className={`rounded-lg border px-2 py-2 text-xs font-semibold capitalize ${method === option ? "border-foreground bg-foreground text-background" : "hover:bg-muted"}`}>{option}</button>)}</div></div>{method !== "pickup" && <div><Label htmlFor="address">Delivery address</Label><Textarea id="address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Street address, suburb, city and postal code" /></div>}<div><Label htmlFor="coupon">Discount code</Label><Input id="coupon" value={coupon} onChange={(e) => setCoupon(e.target.value.toUpperCase())} placeholder="Optional" /></div><div><Label htmlFor="note">Order note</Label><Textarea id="note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Optional delivery note" /></div></div><div className="my-5 border-t pt-4 space-y-2 text-sm"><div className="flex justify-between"><span>{count} item{count === 1 ? "" : "s"}</span><span>R{total.toLocaleString("en-ZA")}</span></div><div className="flex items-center gap-2 text-muted-foreground"><Truck className="h-4 w-4" />Delivery calculated securely at checkout</div><div className="flex justify-between font-display text-xl font-bold pt-2"><span>Items total</span><span>R{total.toLocaleString("en-ZA")}</span></div></div>{!user && <Button asChild variant="outline" className="w-full mb-2"><Link to="/auth" search={{ mode: "register", next: "/cart" }}><UserPlus className="mr-2 h-4 w-4" />Sign in to checkout</Link></Button>}<Button className="w-full" size="lg" disabled={placing} onClick={submit}>{placing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{placing ? "Creating order…" : "Place order"}</Button><p className="mt-3 text-center text-xs text-muted-foreground">NiberDealz will send secure payment instructions before fulfilment.</p></aside></div>}</main><SiteFooter /></div>;
+  if (confirmation)
+    return (
+      <div className="min-h-screen flex flex-col">
+        <SiteHeader />
+        <main className="container mx-auto max-w-xl px-4 py-16 flex-1 text-center">
+          <CheckCircle2 className="mx-auto h-14 w-14 text-emerald-600" />
+          <h1 className="font-display mt-4 text-3xl font-bold">Order received</h1>
+          <p className="mt-3 text-muted-foreground">
+            Your NiberDealz order{" "}
+            <strong className="text-foreground">{confirmation.reference}</strong> has been received.{" "}
+            Card payments are not available yet. We will contact you after confirming your order.
+          </p>
+          <p className="font-display mt-4 text-2xl font-bold">{money(confirmation.total)}</p>
+          <div className="mt-8 flex justify-center gap-3">
+            <Button asChild variant="outline">
+              <Link to="/orders">View orders</Link>
+            </Button>
+            <Button asChild>
+              <Link to="/">Continue shopping</Link>
+            </Button>
+          </div>
+        </main>
+        <SiteFooter />
+      </div>
+    );
+  return (
+    <div className="min-h-screen flex flex-col">
+      <SiteHeader />
+      <main className="container mx-auto max-w-6xl px-4 py-8 flex-1">
+        <Button asChild variant="ghost" size="sm" className="mb-4 -ml-2">
+          <Link to="/">
+            <ArrowLeft className="mr-1 h-4 w-4" />
+            Continue shopping
+          </Link>
+        </Button>
+        <h1 className="font-display text-3xl font-bold">Your cart</h1>
+        {items.length === 0 ? (
+          <div className="mt-8 rounded-2xl border border-dashed p-14 text-center">
+            <ShoppingCart className="mx-auto h-10 w-10 text-muted-foreground" />
+            <h2 className="mt-3 font-display text-xl font-bold">Your cart is empty</h2>
+            <Button asChild className="mt-5">
+              <Link to="/">Shop NiberDealz</Link>
+            </Button>
+          </div>
+        ) : (
+          <div className="mt-6 grid gap-7 lg:grid-cols-[1fr_380px]">
+            <section className="space-y-3">
+              {items.map((item) => (
+                <CartLine
+                  key={lineKey(item)}
+                  item={item}
+                  onQty={(qty) => setQty(lineKey(item), qty)}
+                  onComment={(value) => setComment(lineKey(item), value)}
+                  onRemove={() => remove(lineKey(item))}
+                />
+              ))}
+            </section>
+            <aside className="rounded-2xl border bg-card p-5 h-fit">
+              <h2 className="font-display text-xl font-bold">Checkout</h2>
+              <div className="mt-4 grid gap-3">
+                <div>
+                  <Label htmlFor="name">Full name</Label>
+                  <Input
+                    id="name"
+                    value={buyerName}
+                    onChange={(e) => setBuyerName(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="phone">Contact number</Label>
+                  <Input
+                    id="phone"
+                    inputMode="tel"
+                    value={buyerPhone}
+                    onChange={(e) => setBuyerPhone(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>Delivery</Label>
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    {(["courier", "paxi", "pickup"] as const).map((option) => (
+                      <button
+                        key={option}
+                        onClick={() => chooseMethod(option)}
+                        className={`rounded-lg border px-2 py-2 text-xs font-semibold capitalize ${method === option ? "border-foreground bg-foreground text-background" : "hover:bg-muted"}`}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {method === "paxi" && (
+                  <div className="rounded-xl border bg-secondary/30 p-3">
+                    <Label>PAXI service</Label>
+                    <div className="mt-2 grid gap-2">
+                      {(
+                        Object.entries(tierInfo).filter(([key]) => key !== "courier") as [
+                          DeliveryTier,
+                          (typeof tierInfo)[DeliveryTier],
+                        ][]
+                      ).map(([key, option]) => (
+                        <button
+                          key={key}
+                          onClick={() => setTier(key)}
+                          className={`rounded-lg border p-2 text-left text-xs ${tier === key ? "border-foreground" : "hover:bg-muted"}`}
+                        >
+                          <strong>
+                            {option.label} · {money(option.fee)}
+                          </strong>
+                          <span className="block text-muted-foreground">{option.detail}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="mt-3">
+                      <Label htmlFor="paxi-point">PAXI pickup point</Label>
+                      <Input
+                        id="paxi-point"
+                        value={pickupPoint}
+                        onChange={(e) => setPickupPoint(e.target.value)}
+                        placeholder="PEP, Ackermans or Shoe City branch"
+                      />
+                    </div>
+                    <p className="mt-2 flex gap-1 text-xs text-muted-foreground">
+                      <MapPin className="h-3.5 w-3.5 shrink-0" />
+                      Bring your ID and the SMS collection PIN when collecting.
+                    </p>
+                  </div>
+                )}
+                {method !== "pickup" && (
+                  <div>
+                    <Label htmlFor="address">Delivery address</Label>
+                    <Textarea
+                      id="address"
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      placeholder="Street address, suburb, city and postal code"
+                    />
+                  </div>
+                )}
+                <div>
+                  <Label htmlFor="coupon">Discount code</Label>
+                  <Input
+                    id="coupon"
+                    value={coupon}
+                    onChange={(e) => setCoupon(e.target.value.toUpperCase())}
+                    placeholder="Optional"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="note">Order note</Label>
+                  <Textarea
+                    id="note"
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="Optional delivery note"
+                  />
+                </div>
+              </div>
+              <div className="my-5 border-t pt-4 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span>
+                    {count} item{count === 1 ? "" : "s"}
+                  </span>
+                  <span>{money(total)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="flex items-center gap-2 text-muted-foreground">
+                    <Truck className="h-4 w-4" />
+                    {method === "pickup" ? "Collection" : selected.label}
+                  </span>
+                  <span>{method === "pickup" ? "Confirmed with order" : money(displayedFee)}</span>
+                </div>
+                {method === "courier" && (
+                  <p className="text-xs text-muted-foreground">
+                    First qualifying paid order: free shipping within 48 hours of account creation,
+                    otherwise 25% off. Returning customers get free courier over R1,000.
+                  </p>
+                )}
+                <div className="flex justify-between font-display text-xl font-bold pt-2">
+                  <span>Estimated total</span>
+                  <span>{money(total + displayedFee)}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  The final total is recalculated securely before your order is created.
+                </p>
+              </div>
+              <label className="mb-3 flex cursor-pointer gap-2 text-xs leading-relaxed">
+                <input
+                  type="checkbox"
+                  checked={accepted}
+                  onChange={(e) => setAccepted(e.target.checked)}
+                  className="mt-0.5 h-4 w-4"
+                />
+                <span>
+                  I agree to the{" "}
+                  <Link to="/terms" className="underline">
+                    Terms of service
+                  </Link>{" "}
+                  and{" "}
+                  <Link to="/privacy" className="underline">
+                    Privacy Policy
+                  </Link>
+                  .
+                </span>
+              </label>
+              {!user && (
+                <Button asChild variant="outline" className="w-full mb-2">
+                  <Link to="/auth" search={{ mode: "register", next: "/cart" }}>
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Sign in to checkout
+                  </Link>
+                </Button>
+              )}
+              <Button className="w-full" size="lg" disabled={placing} onClick={submit}>
+                {placing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {placing ? "Submitting order…" : "Submit order request"}
+              </Button>
+              <p className="mt-3 text-center text-xs text-muted-foreground">
+                Card details are entered only on Yoco’s secure checkout. Orders are fulfilled after
+                stock confirmation. Card payments are not available yet.
+              </p>
+            </aside>
+          </div>
+        )}
+      </main>
+      <SiteFooter />
+    </div>
+  );
 }
-function CartLine({ item, onQty, onComment, onRemove }: { item: CartItem; onQty: (qty: number) => void; onComment: (value: string) => void; onRemove: () => void }) { return <article className="rounded-2xl border bg-card p-4 flex gap-4"><div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-muted">{item.image_url && <img src={item.image_url} alt="" className="h-full w-full object-cover" />}</div><div className="min-w-0 flex-1"><div className="flex gap-3 justify-between"><div><h2 className="font-semibold">{item.title}</h2>{item.size && <p className="text-xs text-muted-foreground">{item.size}{item.color ? ` · ${item.color}` : ""}</p>}</div><button onClick={onRemove} aria-label="Remove item" className="text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button></div><p className="mt-1 font-display text-lg font-bold">R{item.price_zar.toLocaleString("en-ZA")}</p><div className="mt-2 flex items-center gap-2"><Button variant="outline" size="icon" onClick={() => onQty(item.qty - 1)}>-</Button><span className="w-6 text-center text-sm font-semibold">{item.qty}</span><Button variant="outline" size="icon" onClick={() => onQty(item.qty + 1)}>+</Button></div><Input className="mt-3 h-9 text-xs" value={item.comment} onChange={(e) => onComment(e.target.value)} placeholder="Note for NiberDealz (optional)" /></div></article>; }
+function CartLine({
+  item,
+  onQty,
+  onComment,
+  onRemove,
+}: {
+  item: CartItem;
+  onQty: (qty: number) => void;
+  onComment: (value: string) => void;
+  onRemove: () => void;
+}) {
+  return (
+    <article className="rounded-2xl border bg-card p-4 flex gap-4">
+      <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-muted">
+        {item.image_url && (
+          <img
+            src={item.image_url}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className="h-full w-full object-cover"
+          />
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex gap-3 justify-between">
+          <div>
+            <h2 className="font-semibold">{item.title}</h2>
+            {item.size && (
+              <p className="text-xs text-muted-foreground">
+                {item.size}
+                {item.color ? ` · ${item.color}` : ""}
+              </p>
+            )}
+          </div>
+          <button
+            onClick={onRemove}
+            aria-label="Remove item"
+            className="text-muted-foreground hover:text-destructive"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+        <p className="mt-1 font-display text-lg font-bold">{money(item.price_zar)}</p>
+        <div className="mt-2 flex items-center gap-2">
+          <Button variant="outline" size="icon" onClick={() => onQty(item.qty - 1)}>
+            -
+          </Button>
+          <span className="w-6 text-center text-sm font-semibold">{item.qty}</span>
+          <Button variant="outline" size="icon" onClick={() => onQty(item.qty + 1)}>
+            +
+          </Button>
+        </div>
+        <Input
+          className="mt-3 h-9 text-xs"
+          value={item.comment}
+          onChange={(e) => onComment(e.target.value)}
+          placeholder="Note for NiberDealz (optional)"
+        />
+      </div>
+    </article>
+  );
+}
