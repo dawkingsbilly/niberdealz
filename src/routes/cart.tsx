@@ -220,7 +220,7 @@ function CartPage() {
                     <div className="mt-4 pt-4 border-t">
                       <p className="text-sm font-semibold flex items-center gap-2"><Truck className="h-4 w-4 text-[color:var(--deal)]" />Delivery</p>
                       <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                        {(opts.length ? opts : DELIVERY_METHODS.map((m) => ({ method: m.key, fee_zar: 0, days: 0 }))).map((o) => (
+                        {(opts.length ? opts : DELIVERY_METHODS.filter((m) => m.key === "meetup" || m.key === "pickup").map((m) => ({ method: m.key, fee_zar: 0, days: 0 }))).map((o) => (
                           <label key={o.method} className={`flex items-center justify-between gap-2 rounded-xl border p-3 text-sm cursor-pointer ${chosen === o.method ? "border-[color:var(--deal)] bg-[var(--deal)]/5" : "border-border"}`}>
                             <span className="flex items-center gap-2">
                               <input
