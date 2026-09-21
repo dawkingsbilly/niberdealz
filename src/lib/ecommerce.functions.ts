@@ -3,11 +3,16 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+const SUPPLIER_MARKUP = 1.4;
+const sellingPriceFromSupplierCost = (cost: number) =>
+  Math.round(cost * SUPPLIER_MARKUP * 100) / 100;
+
 const productInput = z.object({
   id: z.string().uuid().optional(),
   title: z.string().trim().min(2).max(180),
   description: z.string().trim().min(10).max(8000),
-  price_zar: z.number().min(0),
+  // Legacy client field: server always derives the customer price from supplier cost.
+  price_zar: z.number().min(0).optional(),
   sale_price_zar: z.number().min(0).nullable().optional(),
   category: z.string().trim().min(2).max(100),
   brand: z.string().trim().max(100).optional().default(""),
@@ -27,9 +32,9 @@ const productInput = z.object({
   is_new_arrival: z.boolean().optional().default(false),
   is_best_seller: z.boolean().optional().default(false),
   is_active: z.boolean().optional().default(true),
-  supplier_source_url: z.string().url().optional().or(z.literal("")).default(""),
-  supplier_original_price_zar: z.number().min(0).nullable().optional(),
-  supplier_name: z.string().trim().max(160).optional().default(""),
+  supplier_source_url: z.string().url(),
+  supplier_original_price_zar: z.number().positive(),
+  supplier_name: z.string().trim().min(2).max(160),
 });
 
 async function authorize(context: any, required: "staff" | "ceo") {
@@ -68,7 +73,8 @@ export const saveProduct = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => productInput.parse(d))
   .handler(async ({ data, context }) => {
     const { db } = await authorize(context, "ceo");
-    if (data.sale_price_zar != null && data.sale_price_zar > data.price_zar)
+    const sellingPrice = sellingPriceFromSupplierCost(data.supplier_original_price_zar);
+    if (data.sale_price_zar != null && data.sale_price_zar > sellingPrice)
       throw new Error("Sale price cannot exceed regular price.");
     const { data: settings } = await db
       .from("store_settings")
@@ -81,7 +87,7 @@ export const saveProduct = createServerFn({ method: "POST" })
       vendor_id: settings.house_vendor_id,
       title: data.title,
       description: data.description,
-      price_zar: data.price_zar,
+      price_zar: sellingPrice,
       sale_price_zar: data.sale_price_zar ?? null,
       category: data.category,
       brand: data.brand || null,
@@ -108,8 +114,8 @@ export const saveProduct = createServerFn({ method: "POST" })
     const source = {
       product_id: result.data.id,
       source_url: data.supplier_source_url || "",
-      original_price_zar: data.supplier_original_price_zar ?? null,
-      supplier_name: data.supplier_name || "",
+      original_price_zar: data.supplier_original_price_zar,
+      supplier_name: data.supplier_name,
       updated_at: new Date().toISOString(),
       updated_by: context.userId,
     };

@@ -300,6 +300,11 @@ function ProductForm({ product, onDone, save }: { product: any; onDone: () => vo
     supplier_source_url: source?.source_url ?? "",
     supplier_original_price_zar: String(source?.original_price_zar ?? ""),
   });
+  const supplierCost = Number(form.supplier_original_price_zar);
+  const calculatedPrice =
+    Number.isFinite(supplierCost) && supplierCost > 0
+      ? Math.round(supplierCost * 1.4 * 100) / 100
+      : null;
   const field = (key: string, label: string, type = "text") => (
     <label className="grid gap-1 text-sm">
       <span>{label}</span>
@@ -342,7 +347,7 @@ function ProductForm({ product, onDone, save }: { product: any; onDone: () => vo
           id: product.id,
           title: form.title,
           description: form.description,
-          price_zar: Number(form.price_zar),
+          price_zar: calculatedPrice ?? 0,
           sale_price_zar: form.sale_price_zar ? Number(form.sale_price_zar) : null,
           category: form.category,
           brand: form.brand,
@@ -378,7 +383,19 @@ function ProductForm({ product, onDone, save }: { product: any; onDone: () => vo
     >
       {field("title", "Product name")}
       {field("category", "Category")}
-      {field("price_zar", "Price (R)", "number")}
+      <label className="grid gap-1 text-sm">
+        <span>Selling price (R)</span>
+        <Input
+          type="number"
+          value={calculatedPrice ?? ""}
+          readOnly
+          placeholder="Enter supplier cost below"
+          aria-describedby="selling-price-help"
+        />
+        <span id="selling-price-help" className="text-xs text-muted-foreground">
+          Automatically set to supplier cost + 40%. Delivery is added separately at checkout.
+        </span>
+      </label>
       {field("sale_price_zar", "Sale price (optional)", "number")}
       {field("brand", "Brand")}
       {field("sku", "SKU")}
