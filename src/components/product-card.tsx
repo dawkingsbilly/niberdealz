@@ -1,8 +1,92 @@
 import { Link } from "@tanstack/react-router";
 import { ShoppingBag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useCart } from "@/lib/cart";
+import { addToCart } from "@/lib/cart";
 
-export type ProductCardData = { id: string; title: string; price_zar: number; sale_price_zar?: number | null; category?: string | null; image_url?: string | null; stock?: number | null; is_sold?: boolean | null; is_featured?: boolean | null; is_new_arrival?: boolean | null; is_best_seller?: boolean | null; };
-const money = (value: number) => new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR", maximumFractionDigits: 0 }).format(value);
-export function ProductCard({ p }: { p: ProductCardData }) { const { add } = useCart(); const unavailable = Boolean(p.is_sold) || (typeof p.stock === "number" && p.stock < 1); const price = p.sale_price_zar ?? p.price_zar; return <article className="group relative"><Link to="/product/$id" params={{ id: p.id }} className="block"><div className="relative aspect-[.78] overflow-hidden bg-muted">{p.image_url ? <img src={p.image_url} alt={p.title} loading="lazy" decoding="async" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.025]" /> : <div className="grid h-full place-items-center text-xs font-semibold text-muted-foreground">NIBERDEALZ</div>}{(p.is_new_arrival || p.is_best_seller || unavailable) && <Badge className="absolute left-2 top-2 rounded-none bg-background px-2 py-1 text-[9px] font-bold uppercase tracking-[.09em] text-foreground hover:bg-background">{unavailable ? "Sold out" : p.is_new_arrival ? "New" : "Best seller"}</Badge>}</div></Link><div className="relative pt-3"><p className="text-[9px] font-bold uppercase tracking-[.13em] text-muted-foreground">{p.category || "NiberDealz"}</p><Link to="/product/$id" params={{ id: p.id }} className="mt-1 block pr-9 text-sm font-semibold leading-snug hover:underline">{p.title}</Link><div className="mt-1 flex items-center gap-2"><span className="text-sm font-bold">{money(price)}</span>{p.sale_price_zar && <span className="text-xs text-muted-foreground line-through">{money(p.price_zar)}</span>}</div><button onClick={() => !unavailable && add({ id: p.id, title: p.title, price_zar: price, image_url: p.image_url ?? null, qty: 1 })} disabled={unavailable} aria-label={`Add ${p.title} to cart`} className="absolute bottom-0 right-0 grid h-8 w-8 place-items-center border border-foreground bg-background transition hover:bg-foreground hover:text-background disabled:cursor-not-allowed disabled:opacity-30"><ShoppingBag className="h-3.5 w-3.5" /></button></div></article> }
+export type ProductCardData = {
+  id: string;
+  title: string;
+  price_zar: number;
+  sale_price_zar?: number | null;
+  category?: string | null;
+  image_url?: string | null;
+  stock?: number | null;
+  is_sold?: boolean | null;
+  is_featured?: boolean | null;
+  is_new_arrival?: boolean | null;
+  is_best_seller?: boolean | null;
+};
+const money = (value: number) =>
+  new Intl.NumberFormat("en-ZA", {
+    style: "currency",
+    currency: "ZAR",
+    maximumFractionDigits: 0,
+  }).format(value);
+export function ProductCard({ p }: { p: ProductCardData }) {
+  const unavailable = Boolean(p.is_sold) || (typeof p.stock === "number" && p.stock < 1);
+  const price = p.sale_price_zar ?? p.price_zar;
+  return (
+    <article className="group relative">
+      <Link to="/product/$id" params={{ id: p.id }} className="block">
+        <div className="relative aspect-[.78] overflow-hidden bg-muted">
+          {p.image_url ? (
+            <img
+              src={p.image_url}
+              alt={p.title}
+              loading="lazy"
+              decoding="async"
+              className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.025]"
+            />
+          ) : (
+            <div className="grid h-full place-items-center text-xs font-semibold text-muted-foreground">
+              NIBERDEALZ
+            </div>
+          )}
+          {(p.is_new_arrival || p.is_best_seller || unavailable) && (
+            <Badge className="absolute left-2 top-2 rounded-none bg-background px-2 py-1 text-[9px] font-bold uppercase tracking-[.09em] text-foreground hover:bg-background">
+              {unavailable ? "Sold out" : p.is_new_arrival ? "New" : "Best seller"}
+            </Badge>
+          )}
+        </div>
+      </Link>
+      <div className="relative pt-3">
+        <p className="text-[9px] font-bold uppercase tracking-[.13em] text-muted-foreground">
+          {p.category || "NiberDealz"}
+        </p>
+        <Link
+          to="/product/$id"
+          params={{ id: p.id }}
+          className="mt-1 block pr-9 text-sm font-semibold leading-snug hover:underline"
+        >
+          {p.title}
+        </Link>
+        <div className="mt-1 flex items-center gap-2">
+          <span className="text-sm font-bold">{money(price)}</span>
+          {p.sale_price_zar && (
+            <span className="text-xs text-muted-foreground line-through">{money(p.price_zar)}</span>
+          )}
+        </div>
+        <button
+          onClick={() =>
+            !unavailable &&
+            addToCart({
+              product_id: p.id,
+              title: p.title,
+              price_zar: price,
+              image_url: p.image_url ?? null,
+              size: null,
+              color: null,
+              qty: 1,
+              comment: "",
+            })
+          }
+          disabled={unavailable}
+          aria-label={`Add ${p.title} to cart`}
+          className="absolute bottom-0 right-0 grid h-8 w-8 place-items-center border border-foreground bg-background transition hover:bg-foreground hover:text-background disabled:cursor-not-allowed disabled:opacity-30"
+        >
+          <ShoppingBag className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </article>
+  );
+}

@@ -114,22 +114,24 @@ function CartPage() {
     setPlacing(true);
     try {
       const result = (await placeOrder({
-        items: items.map((item) => ({
-          product_id: item.product_id,
-          qty: item.qty,
-          size: item.size,
-          color: item.color,
-          comment: item.comment,
-        })),
-        buyer_name: buyerName,
-        buyer_phone: buyerPhone,
-        delivery_method: method,
-        delivery_address: address,
-        note,
-        discount_code: coupon,
-        delivery_tier: method === "pickup" ? "pickup" : tier,
-        paxi_pickup_point: pickupPoint,
-        terms_version: "2026-09",
+        data: {
+          items: items.map((item) => ({
+            product_id: item.product_id,
+            qty: item.qty,
+            size: item.size,
+            color: item.color,
+            comment: item.comment,
+          })),
+          buyer_name: buyerName,
+          buyer_phone: buyerPhone,
+          delivery_method: method,
+          delivery_address: address,
+          note,
+          discount_code: coupon,
+          delivery_tier: method === "pickup" ? "pickup" : tier,
+          paxi_pickup_point: pickupPoint,
+          terms_version: "2026-09",
+        },
       })) as {
         order_id?: string;
         reference: string;
@@ -367,8 +369,8 @@ function CartPage() {
                 {placing ? "Submitting order…" : "Submit order request"}
               </Button>
               <p className="mt-3 text-center text-xs text-muted-foreground">
-                Card details are entered only on Yoco’s secure checkout. Orders are fulfilled after
-                stock confirmation. Card payments are not available yet.
+                We do not collect card details on this site. We will review stock and contact you
+                with payment instructions before fulfilment.
               </p>
             </aside>
           </div>

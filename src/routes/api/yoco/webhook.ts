@@ -1,6 +1,31 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createHmac, timingSafeEqual } from "node:crypto";
 
+type PaymentAdmin = {
+  rpc: (
+    functionName: "confirm_yoco_payment",
+    args: {
+      p_order_id: string;
+      p_attempt_id: string;
+      p_checkout_id: string;
+      p_payment_id: string;
+    },
+  ) => Promise<{ error: { message?: string } | null }>;
+  from: (table: "payment_attempts") => {
+    update: (values: { status: string; failure_message: string }) => {
+      eq: (
+        column: "id" | "provider_checkout_id",
+        value: string,
+      ) => {
+        eq: (
+          column: "id" | "provider_checkout_id",
+          value: string,
+        ) => Promise<{ error: { message?: string } | null }>;
+      };
+    };
+  };
+};
+
 function validYocoSignature(rawBody: string, request: Request, secret: string) {
   const id = request.headers.get("webhook-id");
   const timestamp = request.headers.get("webhook-timestamp");
@@ -42,20 +67,22 @@ export const Route = createFileRoute("/api/yoco/webhook")({
           const status = typeof payload.status === "string" ? payload.status : "";
           if (!orderId || !attemptId || !checkoutId) return Response.json({ received: true });
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          const paymentAdmin = supabaseAdmin as unknown as PaymentAdmin;
           if (status === "completed" && paymentId) {
-            const { error } = await supabaseAdmin.rpc("confirm_yoco_payment", {
+            const { error } = await paymentAdmin.rpc("confirm_yoco_payment", {
               p_order_id: orderId,
               p_attempt_id: attemptId,
               p_checkout_id: checkoutId,
               p_payment_id: paymentId,
             });
-            if (error) throw error;
+            if (error) throw new Error(error.message || "Payment confirmation failed.");
           } else if (["cancelled", "failed", "expired"].includes(status)) {
-            await supabaseAdmin
+            const { error } = await paymentAdmin
               .from("payment_attempts")
               .update({ status: "failed", failure_message: `Yoco checkout ${status}` })
               .eq("id", attemptId)
               .eq("provider_checkout_id", checkoutId);
+            if (error) throw new Error(error.message || "Payment attempt update failed.");
           }
           return Response.json({ received: true });
         } catch (error) {
