@@ -31,16 +31,11 @@ export const Route = createFileRoute("/sitemap.xml")({
             process.env.SUPABASE_PUBLISHABLE_KEY!,
             { auth: { persistSession: false, autoRefreshToken: false } },
           );
-          const [{ data: products }, { data: vendors }] = await Promise.all([
-            supabase.from("products").select("id, updated_at").eq("status", "approved").limit(5000),
-            supabase.from("vendors").select("id, updated_at").eq("status", "approved").limit(5000),
-          ]);
-          (vendors ?? []).forEach((v: any) => entries.push({
-            path: `/vendor/${v.id}`,
-            lastmod: v.updated_at ? new Date(v.updated_at).toISOString() : undefined,
-            changefreq: "weekly",
-            priority: "0.7",
-          }));
+          const { data: products } = await supabase
+            .from("products")
+            .select("id, updated_at")
+            .eq("status", "approved")
+            .limit(5000);
           (products ?? []).forEach((p: any) => entries.push({
             path: `/product/${p.id}`,
             lastmod: p.updated_at ? new Date(p.updated_at).toISOString() : undefined,

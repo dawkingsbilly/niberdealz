@@ -21,10 +21,7 @@ import { Route as CartRouteImport } from './routes/cart'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as VendorIdRouteImport } from './routes/vendor.$id'
 import { Route as ProductIdRouteImport } from './routes/product.$id'
-import { Route as AuthenticatedRegisterShopRouteImport } from './routes/_authenticated/register-shop'
-import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAffiliateRouteImport } from './routes/_authenticated/affiliate'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
@@ -90,26 +87,10 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const VendorIdRoute = VendorIdRouteImport.update({
-  id: '/vendor/$id',
-  path: '/vendor/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ProductIdRoute = ProductIdRouteImport.update({
   id: '/product/$id',
   path: '/product/$id',
   getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedRegisterShopRoute =
-  AuthenticatedRegisterShopRouteImport.update({
-    id: '/register-shop',
-    path: '/register-shop',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAffiliateRoute = AuthenticatedAffiliateRouteImport.update({
   id: '/affiliate',
@@ -156,10 +137,7 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/affiliate': typeof AuthenticatedAffiliateRoute
-  '/dashboard': typeof AuthenticatedDashboardRoute
-  '/register-shop': typeof AuthenticatedRegisterShopRoute
   '/product/$id': typeof ProductIdRoute
-  '/vendor/$id': typeof VendorIdRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
 }
 export interface FileRoutesByTo {
@@ -178,10 +156,7 @@ export interface FileRoutesByTo {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/affiliate': typeof AuthenticatedAffiliateRoute
-  '/dashboard': typeof AuthenticatedDashboardRoute
-  '/register-shop': typeof AuthenticatedRegisterShopRoute
   '/product/$id': typeof ProductIdRoute
-  '/vendor/$id': typeof VendorIdRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
 }
 export interface FileRoutesById {
@@ -202,10 +177,7 @@ export interface FileRoutesById {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/affiliate': typeof AuthenticatedAffiliateRoute
-  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
-  '/_authenticated/register-shop': typeof AuthenticatedRegisterShopRoute
   '/product/$id': typeof ProductIdRoute
-  '/vendor/$id': typeof VendorIdRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
 }
 export interface FileRouteTypes {
@@ -226,10 +198,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/admin'
     | '/affiliate'
-    | '/dashboard'
-    | '/register-shop'
     | '/product/$id'
-    | '/vendor/$id'
     | '/.mcp/invoke-tool/$tool'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -248,10 +217,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/admin'
     | '/affiliate'
-    | '/dashboard'
-    | '/register-shop'
     | '/product/$id'
-    | '/vendor/$id'
     | '/.mcp/invoke-tool/$tool'
   id:
     | '__root__'
@@ -271,10 +237,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/admin'
     | '/_authenticated/affiliate'
-    | '/_authenticated/dashboard'
-    | '/_authenticated/register-shop'
     | '/product/$id'
-    | '/vendor/$id'
     | '/.mcp/invoke-tool/$tool'
   fileRoutesById: FileRoutesById
 }
@@ -294,7 +257,6 @@ export interface RootRouteChildren {
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   ProductIdRoute: typeof ProductIdRoute
-  VendorIdRoute: typeof VendorIdRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
 }
 
@@ -384,33 +346,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/vendor/$id': {
-      id: '/vendor/$id'
-      path: '/vendor/$id'
-      fullPath: '/vendor/$id'
-      preLoaderRoute: typeof VendorIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/product/$id': {
       id: '/product/$id'
       path: '/product/$id'
       fullPath: '/product/$id'
       preLoaderRoute: typeof ProductIdRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/register-shop': {
-      id: '/_authenticated/register-shop'
-      path: '/register-shop'
-      fullPath: '/register-shop'
-      preLoaderRoute: typeof AuthenticatedRegisterShopRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/dashboard': {
-      id: '/_authenticated/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/affiliate': {
       id: '/_authenticated/affiliate'
@@ -453,15 +394,11 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedAffiliateRoute: typeof AuthenticatedAffiliateRoute
-  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
-  AuthenticatedRegisterShopRoute: typeof AuthenticatedRegisterShopRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedAffiliateRoute: AuthenticatedAffiliateRoute,
-  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
-  AuthenticatedRegisterShopRoute: AuthenticatedRegisterShopRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -484,7 +421,6 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   ProductIdRoute: ProductIdRoute,
-  VendorIdRoute: VendorIdRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
 }
 export const routeTree = rootRouteImport

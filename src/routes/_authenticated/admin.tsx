@@ -56,8 +56,7 @@ function Admin() {
           </h1>
           {isOwner && (
             <div className="flex gap-2">
-              <Button asChild size="sm" variant="outline"><Link to="/dashboard"><Store className="h-4 w-4 mr-1.5" />My store</Link></Button>
-              <Button asChild size="sm" className="bg-foreground text-background hover:bg-foreground/90"><Link to="/register-shop">Sell a product</Link></Button>
+              <Button asChild size="sm" className="bg-foreground text-background hover:bg-foreground/90"><Link to="/" hash="shop"><Package className="h-4 w-4 mr-1.5" />View storefront</Link></Button>
             </div>
           )}
         </div>
@@ -279,7 +278,6 @@ function StoresTab({ qc }: { qc: ReturnType<typeof useQueryClient> }) {
             <div className="flex gap-2 flex-wrap">
               <Button size="sm" variant="outline" onClick={() => setViewing(v.id)}>Full info</Button>
               <Button size="sm" variant="outline" onClick={() => setWarning({ id: v.id, name: v.business_name })} className="text-amber-700 border-amber-300"><AlertTriangle className="h-3.5 w-3.5 mr-1" />Warn</Button>
-              <Button asChild size="sm" variant="outline"><Link to="/vendor/$id" params={{ id: v.id }}><Store className="h-3.5 w-3.5 mr-1" />Shop</Link></Button>
               <Button size="sm" variant="outline" onClick={() => remove(v.id, v.business_name)}><Trash2 className="h-3.5 w-3.5 mr-1 text-destructive" />Delete</Button>
             </div>
           </div>
@@ -438,7 +436,7 @@ function ReportsTab({ qc }: { qc: ReturnType<typeof useQueryClient> }) {
                 <div className="min-w-0">
                   <div className="font-semibold flex items-center gap-2"><Flag className="h-4 w-4 text-destructive" />{r.reason}</div>
                   <div className="text-xs text-muted-foreground">
-                    {r.target_type === "product" ? <Link to="/product/$id" params={{ id: r.target_id }} className="underline">View listing</Link> : <Link to="/vendor/$id" params={{ id: r.target_id }} className="underline">View store</Link>}
+                    {r.target_type === "product" ? <Link to="/product/$id" params={{ id: r.target_id }} className="underline">View product</Link> : <span>Legacy store report</span>}
                     {" · "}{new Date(r.created_at).toLocaleString()}
                   </div>
                   {r.note && <p className="text-sm mt-2 text-foreground/80 whitespace-pre-line">{r.note}</p>}
