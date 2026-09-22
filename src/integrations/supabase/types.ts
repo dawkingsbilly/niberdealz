@@ -246,6 +246,102 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_addresses: {
+        Row: {
+          address_line1: string
+          address_line2: string
+          city: string
+          created_at: string
+          id: string
+          is_default: boolean
+          label: string
+          phone: string
+          postal_code: string
+          province: string
+          recipient_name: string
+          suburb: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address_line1: string
+          address_line2?: string
+          city?: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          label?: string
+          phone?: string
+          postal_code?: string
+          province?: string
+          recipient_name?: string
+          suburb?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address_line1?: string
+          address_line2?: string
+          city?: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          label?: string
+          phone?: string
+          postal_code?: string
+          province?: string
+          recipient_name?: string
+          suburb?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      discount_codes: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          ends_at: string | null
+          id: string
+          kind: string
+          max_uses: number | null
+          min_order_zar: number
+          starts_at: string | null
+          updated_at: string
+          uses_count: number
+          value: number
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          ends_at?: string | null
+          id?: string
+          kind?: string
+          max_uses?: number | null
+          min_order_zar?: number
+          starts_at?: string | null
+          updated_at?: string
+          uses_count?: number
+          value: number
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          ends_at?: string | null
+          id?: string
+          kind?: string
+          max_uses?: number | null
+          min_order_zar?: number
+          starts_at?: string | null
+          updated_at?: string
+          uses_count?: number
+          value?: number
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           color: string | null
@@ -529,7 +625,9 @@ export type Database = {
           image_url: string | null
           images: string[]
           is_active: boolean
+          is_best_seller: boolean
           is_featured: boolean
+          is_new_arrival: boolean
           is_sold: boolean
           price_zar: number
           rejection_reason: string | null
@@ -538,9 +636,12 @@ export type Database = {
           sku: string | null
           status: Database["public"]["Enums"]["product_status"]
           stock: number | null
+          stock_sold: number
           tags: string[]
           title: string
           updated_at: string
+          updated_by: string | null
+          variations: Json
           vendor_id: string
         }
         Insert: {
@@ -557,7 +658,9 @@ export type Database = {
           image_url?: string | null
           images?: string[]
           is_active?: boolean
+          is_best_seller?: boolean
           is_featured?: boolean
+          is_new_arrival?: boolean
           is_sold?: boolean
           price_zar: number
           rejection_reason?: string | null
@@ -566,9 +669,12 @@ export type Database = {
           sku?: string | null
           status?: Database["public"]["Enums"]["product_status"]
           stock?: number | null
+          stock_sold?: number
           tags?: string[]
           title: string
           updated_at?: string
+          updated_by?: string | null
+          variations?: Json
           vendor_id: string
         }
         Update: {
@@ -585,7 +691,9 @@ export type Database = {
           image_url?: string | null
           images?: string[]
           is_active?: boolean
+          is_best_seller?: boolean
           is_featured?: boolean
+          is_new_arrival?: boolean
           is_sold?: boolean
           price_zar?: number
           rejection_reason?: string | null
@@ -594,9 +702,12 @@ export type Database = {
           sku?: string | null
           status?: Database["public"]["Enums"]["product_status"]
           stock?: number | null
+          stock_sold?: number
           tags?: string[]
           title?: string
           updated_at?: string
+          updated_by?: string | null
+          variations?: Json
           vendor_id?: string
         }
         Relationships: [
@@ -836,22 +947,40 @@ export type Database = {
       store_settings: {
         Row: {
           created_at: string
+          default_delivery_fee_zar: number
+          delivery_note: string
           house_vendor_id: string
           id: boolean
+          payment_mode: string
+          payment_provider: string
+          store_name: string
+          support_email: string
           support_whatsapp: string
           updated_at: string
         }
         Insert: {
           created_at?: string
+          default_delivery_fee_zar?: number
+          delivery_note?: string
           house_vendor_id: string
           id?: boolean
+          payment_mode?: string
+          payment_provider?: string
+          store_name?: string
+          support_email?: string
           support_whatsapp?: string
           updated_at?: string
         }
         Update: {
           created_at?: string
+          default_delivery_fee_zar?: number
+          delivery_note?: string
           house_vendor_id?: string
           id?: boolean
+          payment_mode?: string
+          payment_provider?: string
+          store_name?: string
+          support_email?: string
           support_whatsapp?: string
           updated_at?: string
         }
@@ -1076,6 +1205,23 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_niberdealz_order: {
+        Args: {
+          p_buyer_name: string
+          p_buyer_phone: string
+          p_delivery_address: string
+          p_delivery_method: string
+          p_discount_code?: string
+          p_items: Json
+          p_note?: string
+        }
+        Returns: {
+          order_id: string
+          payment_status: string
+          reference: string
+          total_zar: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
