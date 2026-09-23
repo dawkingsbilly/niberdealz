@@ -9,10 +9,10 @@ import {
   Check,
   Clipboard,
   Crown,
-  Download,
   Eye,
   Loader2,
   PackageCheck,
+  Upload,
   Plus,
   ShieldCheck,
   ShoppingBag,
@@ -34,13 +34,17 @@ import {
   saveProduct,
   updateManualFulfilment,
   updateOrderFulfillment,
-  exportTeemDropOrder,
+  listCatalogueOperations,
+  listSupplierConnections,
+  reviewImportedProduct,
+  saveSupplierConnection,
+  stageSupplierImport,
 } from "@/lib/ecommerce.functions";
 import { ProductImageUploader } from "@/components/product-image-uploader";
 import { suggestProductCopy } from "@/lib/ai.functions";
 
 export const Route = createFileRoute("/_authenticated/admin")({ component: Admin });
-type Tab = "analytics" | "products" | "fulfilment" | "admins";
+type Tab = "analytics" | "catalogue" | "products" | "fulfilment" | "admins";
 
 function Admin() {
   const { roles, isLoading } = useAuth();
@@ -68,7 +72,8 @@ function Admin() {
       </div>
     );
   const tabs: { id: Tab; label: string }[] = [
-    { id: "analytics", label: "Analytics" },
+    { id: "analytics", label: "Overview" },
+    { id: "catalogue", label: "Supplier imports" },
     { id: "products", label: "Products" },
     { id: "fulfilment", label: "Fulfilment" },
     { id: "admins", label: "Admins" },
@@ -81,11 +86,11 @@ function Admin() {
           <div>
             <h1 className="flex items-center gap-2 font-display text-3xl font-bold">
               {isCEO ? <Crown /> : <ShieldCheck />}
-              {isCEO ? "CEO control room" : "Admin workspace"}
+              {isCEO ? "CEO control centre" : "Admin workspace"}
             </h1>
             <p className="mt-2 text-muted-foreground">
               {isCEO
-                ? "Catalogue, fulfilment and operational access."
+                ? "Review supplier imports, approve catalogue changes and run fulfilment."
                 : "Your role has no access to money, payments, customer details, CEO details or staff management."}
             </p>
           </div>
@@ -107,6 +112,7 @@ function Admin() {
               ))}
             </nav>
             {tab === "analytics" && <Analytics />}
+            {tab === "catalogue" && <CatalogueOperations />}
             {tab === "products" && <Products />}
             {tab === "fulfilment" && <Fulfilment />}
             {tab === "admins" && <Admins />}
@@ -180,6 +186,297 @@ function Metric({ icon: Icon, label, value }: { icon: any; label: string; value:
   );
 }
 
+function CatalogueOperations() {
+  const qc = useQueryClient();
+  const getOperations = useServerFn(listCatalogueOperations);
+  const getConnections = useServerFn(listSupplierConnections);
+  const saveConnection = useServerFn(saveSupplierConnection);
+  const stageImport = useServerFn(stageSupplierImport);
+  const review = useServerFn(reviewImportedProduct);
+  const [supplierName, setSupplierName] = useState("");
+  const [supplierUrl, setSupplierUrl] = useState("");
+  const [sourceType, setSourceType] = useState<"website" | "api_feed">("website");
+  const [importSupplierId, setImportSupplierId] = useState("");
+  const [rowsText, setRowsText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const { data: operations, isLoading } = useQuery({
+    queryKey: ["catalogue-operations"],
+    queryFn: () => getOperations({ data: undefined as any }),
+  });
+  const { data: connections = [] } = useQuery({
+    queryKey: ["supplier-connections"],
+    queryFn: () => getConnections({ data: undefined as any }),
+  });
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: ["catalogue-operations"] });
+    qc.invalidateQueries({ queryKey: ["supplier-connections"] });
+    qc.invalidateQueries({ queryKey: ["ceo-analytics"] });
+    qc.invalidateQueries({ queryKey: ["ceo-products"] });
+  };
+  const addSupplier = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    try {
+      await saveConnection({
+        data: {
+          supplier_name: supplierName,
+          base_url: supplierUrl,
+          source_type: sourceType,
+          is_enabled: true,
+        },
+      });
+      setSupplierName("");
+      setSupplierUrl("");
+      toast.success("Supplier connection recorded");
+      refresh();
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const importRows = async (event: React.FormEvent) => {
+    event.preventDefault();
+    let rows: unknown;
+    try {
+      rows = JSON.parse(rowsText);
+    } catch {
+      toast.error("Use a JSON list of product records.");
+      return;
+    }
+    if (!Array.isArray(rows)) {
+      toast.error("The import must be a JSON list.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const result = await stageImport({
+        data: { supplier_connection_id: importSupplierId, rows, confirmed_by_owner: true },
+      });
+      setRowsText("");
+      toast.success(
+        `${result.staged_count} item(s) staged${result.rejected_count ? `; ${result.rejected_count} need attention` : ""}`,
+      );
+      refresh();
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const decide = async (id: string, action: "approve" | "reject") => {
+    if (!confirm(`${action === "approve" ? "Publish" : "Reject"} this imported product?`)) return;
+    try {
+      await review({ data: { id, action } });
+      toast.success(
+        action === "approve" ? "Product approved and published" : "Import item rejected",
+      );
+      refresh();
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+  if (isLoading)
+    return (
+      <div className="py-16 text-center">
+        <Loader2 className="mx-auto animate-spin" />
+      </div>
+    );
+  return (
+    <section className="mt-8 space-y-8">
+      <div>
+        <h2 className="font-display text-2xl font-bold">Supplier imports</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Manual, supplier-agnostic intake. Connections hold no credentials here; every item stays
+          private until you approve it.
+        </p>
+      </div>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <form onSubmit={addSupplier} className="rounded-xl border bg-card p-5">
+          <h3 className="font-semibold">Record a supplier connection</h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Record a supplier you have manually authorised. This does not contact their site or save
+            credentials.
+          </p>
+          <div className="mt-4 grid gap-3">
+            <Input
+              required
+              value={supplierName}
+              onChange={(e) => setSupplierName(e.target.value)}
+              placeholder="Supplier name"
+            />
+            <Input
+              required
+              type="url"
+              value={supplierUrl}
+              onChange={(e) => setSupplierUrl(e.target.value)}
+              placeholder="https://supplier.example"
+            />
+            <label className="text-sm">
+              Source type{" "}
+              <select
+                className="ml-2 rounded border bg-background px-2 py-1"
+                value={sourceType}
+                onChange={(e) => setSourceType(e.target.value as "website" | "api_feed")}
+              >
+                <option value="website">Website / manual source</option>
+                <option value="api_feed">Authorised API feed</option>
+              </select>
+            </label>
+            <Button disabled={busy}>
+              <Plus className="mr-2 h-4 w-4" />
+              Record supplier
+            </Button>
+          </div>
+        </form>
+        <form onSubmit={importRows} className="rounded-xl border bg-card p-5">
+          <h3 className="font-semibold">Stage a catalogue import</h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Paste a normalised JSON list. Valid rows are priced at cost × 1.40 and sent to
+            review—not the storefront.
+          </p>
+          <select
+            required
+            className="mt-4 w-full rounded border bg-background px-3 py-2 text-sm"
+            value={importSupplierId}
+            onChange={(e) => setImportSupplierId(e.target.value)}
+          >
+            <option value="">Choose a recorded supplier</option>
+            {connections
+              .filter((connection: any) => connection.is_enabled)
+              .map((connection: any) => (
+                <option key={connection.id} value={connection.id}>
+                  {connection.supplier_name}
+                </option>
+              ))}
+          </select>
+          <Textarea
+            required
+            className="mt-3 min-h-32 font-mono text-xs"
+            value={rowsText}
+            onChange={(e) => setRowsText(e.target.value)}
+            placeholder={
+              '[{"title":"...","description":"...","category":"...","source_url":"https://...","supplier_cost_zar":100,"images":["https://...","https://...","https://...","https://...","https://..."]}]'
+            }
+          />
+          <Button className="mt-3" disabled={busy}>
+            <Upload className="mr-2 h-4 w-4" />
+            Validate and stage
+          </Button>
+        </form>
+      </div>
+      <div className="rounded-xl border bg-card p-5">
+        <h3 className="font-semibold">Recorded supplier connections</h3>
+        <div className="mt-4 space-y-2">
+          {connections.length ? (
+            connections.map((connection: any) => (
+              <div
+                key={connection.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 text-sm"
+              >
+                <div>
+                  <p className="font-medium">{connection.supplier_name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {connection.source_type === "api_feed"
+                      ? "Authorised feed record"
+                      : "Manual source record"}{" "}
+                    · {connection.connection_status}
+                  </p>
+                </div>
+                <a
+                  className="text-xs underline"
+                  href={connection.base_url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open source
+                </a>
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-muted-foreground">No supplier connections recorded.</p>
+          )}
+        </div>
+      </div>
+      <div>
+        <h3 className="font-display text-xl font-bold">Approval queue</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Approval publishes the product with the server-authoritative 40% markup. Check sources,
+          stock, image rights and product facts first.
+        </p>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          {operations?.reviews.length ? (
+            operations.reviews.map((item: any) => (
+              <article key={item.id} className="rounded-xl border bg-card p-4">
+                <div className="flex gap-3">
+                  <div className="h-16 w-16 shrink-0 overflow-hidden rounded bg-muted">
+                    {item.image_url && (
+                      <img src={item.image_url} alt="" className="h-full w-full object-cover" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold">{item.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {item.category} · {item.supplier_name || "Supplier not set"}
+                    </p>
+                    <p className="mt-1 text-sm">
+                      Cost R{Number(item.original_price_zar).toFixed(2)} → R
+                      {Number(item.proposed_price_zar).toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-4 flex gap-2">
+                  <Button size="sm" onClick={() => decide(item.id, "approve")}>
+                    <Check className="mr-1 h-3.5 w-3.5" />
+                    Approve & publish
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => decide(item.id, "reject")}>
+                    Reject
+                  </Button>
+                </div>
+              </article>
+            ))
+          ) : (
+            <p className="rounded-xl border bg-card p-5 text-sm text-muted-foreground">
+              No imports await your review.
+            </p>
+          )}
+        </div>
+      </div>
+      {operations?.errors.length ? (
+        <div className="rounded-xl border border-amber-300/60 bg-amber-50/60 p-5 text-sm dark:bg-amber-950/20">
+          <h3 className="font-semibold">Rows needing attention</h3>
+          <ul className="mt-3 space-y-2">
+            {operations.errors.map((error: any) => (
+              <li key={error.id}>
+                Import {error.catalogue_import_id.slice(0, 8)} · row {error.row_number}:{" "}
+                {error.message}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      <div className="rounded-xl border bg-card p-5">
+        <h3 className="font-semibold">Recent operational activity</h3>
+        <div className="mt-3 space-y-2 text-sm">
+          {operations?.activity.length ? (
+            operations.activity.map((event: any) => (
+              <p key={event.id} className="rounded-lg bg-secondary/60 p-3">
+                <span className="font-medium">{event.action.replaceAll("_", " ")}</span>{" "}
+                <span className="text-muted-foreground">
+                  · {new Date(event.created_at).toLocaleString("en-ZA")}
+                </span>
+              </p>
+            ))
+          ) : (
+            <p className="text-muted-foreground">No activity recorded yet.</p>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function Products() {
   const qc = useQueryClient();
   const save = useServerFn(saveProduct);
@@ -191,7 +488,7 @@ function Products() {
       const { data, error } = await supabase
         .from("products")
         .select(
-          "id,title,description,price_zar,sale_price_zar,category,brand,sku,stock,image_url,images,is_featured,is_new_arrival,is_best_seller,is_active,product_supplier_sources(source_url,original_price_zar,supplier_name,supplier_sku,teemdrop_sa_fulfilment_verified_at)",
+          "id,title,description,price_zar,sale_price_zar,category,brand,sku,stock,image_url,images,is_featured,is_new_arrival,is_best_seller,is_active,product_supplier_sources(source_url,original_price_zar,supplier_name,supplier_sku,supplier_sku)",
         )
         .order("created_at", { ascending: false })
         .limit(200);
@@ -302,7 +599,6 @@ function ProductForm({ product, onDone, save }: { product: any; onDone: () => vo
     supplier_source_url: source?.source_url ?? "",
     supplier_original_price_zar: String(source?.original_price_zar ?? ""),
     supplier_sku: source?.supplier_sku ?? "",
-    teemdrop_sa_fulfilment_verified: Boolean(source?.teemdrop_sa_fulfilment_verified_at),
   });
   const supplierCost = Number(form.supplier_original_price_zar);
   const calculatedPrice =
@@ -371,7 +667,6 @@ function ProductForm({ product, onDone, save }: { product: any; onDone: () => vo
             ? Number(form.supplier_original_price_zar)
             : null,
           supplier_sku: form.supplier_sku,
-          teemdrop_sa_fulfilment_verified: form.teemdrop_sa_fulfilment_verified,
         },
       });
       toast.success(product.id ? "Product updated" : "Product added");
@@ -417,24 +712,7 @@ function ProductForm({ product, onDone, save }: { product: any; onDone: () => vo
       </div>
       {field("supplier_name", "Supplier name (private)")}
       {field("supplier_original_price_zar", "Supplier cost (R, private)", "number")}
-      {field("supplier_sku", "TeemDrop SKU (private)")}
-      <label className="flex items-start gap-2 rounded-lg border p-3 text-sm">
-        <input
-          type="checkbox"
-          className="mt-0.5"
-          checked={form.teemdrop_sa_fulfilment_verified}
-          onChange={(event) =>
-            setForm({ ...form, teemdrop_sa_fulfilment_verified: event.target.checked })
-          }
-        />
-        <span>
-          <span className="block font-medium">South Africa fulfilment verified</span>
-          <span className="text-xs text-muted-foreground">
-            Confirm current stock, delivery terms and South Africa availability in TeemDrop before
-            enabling supplier export.
-          </span>
-        </span>
-      </label>
+      {field("supplier_sku", "Supplier SKU (private)")}
       <div className="md:col-span-2">
         {field("supplier_source_url", "Supplier product link (private)")}
       </div>
@@ -479,7 +757,6 @@ function Fulfilment() {
   const getQueue = useServerFn(listFulfilmentQueue);
   const setFulfilment = useServerFn(updateManualFulfilment);
   const setOrder = useServerFn(updateOrderFulfillment);
-  const exportTeemDrop = useServerFn(exportTeemDropOrder);
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["ceo-fulfilment"],
     queryFn: () => getQueue({ data: undefined as any }),
@@ -498,33 +775,6 @@ function Fulfilment() {
     try {
       await setOrder({ data: { id, status } });
       toast.success("Order status updated");
-      refresh();
-    } catch (error: any) {
-      toast.error(error.message);
-    }
-  };
-  const downloadTeemDrop = async (order: any) => {
-    try {
-      const result = await exportTeemDrop({ data: { id: order.id } });
-      const binary = atob(result.workbook_base64);
-      const bytes = new Uint8Array(binary.length);
-      for (let index = 0; index < binary.length; index += 1)
-        bytes[index] = binary.charCodeAt(index);
-      const url = URL.createObjectURL(
-        new Blob([bytes], {
-          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        }),
-      );
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = result.filename;
-      link.click();
-      URL.revokeObjectURL(url);
-      toast.success(
-        result.already_prepared
-          ? "Downloaded the existing audited TeemDrop file"
-          : "TeemDrop file prepared for manual upload",
-      );
       refresh();
     } catch (error: any) {
       toast.error(error.message);
@@ -558,21 +808,10 @@ function Fulfilment() {
       <div>
         <h2 className="font-display text-2xl font-bold">Manual fulfilment</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Approve each order request internally, prepare a TeemDrop file only when supplier checks
-          pass, then keep its audit trail current. Payments stay disabled.
+          Check each supplier manually, place the order through the authorised supplier route, then
+          keep its audit trail current. Payments remain disabled.
         </p>
       </div>
-      <aside className="mt-5 rounded-xl border border-amber-300/60 bg-amber-50/60 p-4 text-sm dark:bg-amber-950/20">
-        <p className="font-semibold">TeemDrop connection options</p>
-        <p className="mt-1 text-muted-foreground">
-          TeemDrop lists direct connectors for Shopify, WooCommerce, eBay and Wix. NiberDealz is a
-          custom storefront, so none is authorised here.
-        </p>
-        <p className="mt-2 text-muted-foreground">
-          Use the CEO-reviewed TeemDrop XLSX download and the official manual import workflow until
-          TeemDrop confirms a supported custom-store route.
-        </p>
-      </aside>
       <div className="mt-6 space-y-4">
         {orders.length === 0 ? (
           <p className="rounded-xl border bg-card p-6 text-sm text-muted-foreground">
@@ -593,24 +832,6 @@ function Fulfilment() {
                   <Button size="sm" variant="outline" onClick={() => copy(order)}>
                     <Clipboard className="mr-1.5 h-4 w-4" />
                     Copy summary
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={
-                      order.status !== "processing" ||
-                      order.fulfilment_status !== "Pending Fulfilment" ||
-                      (order.teemdrop_order_exports ?? []).length > 0
-                    }
-                    onClick={() => downloadTeemDrop(order)}
-                    title={
-                      (order.teemdrop_order_exports ?? []).length > 0
-                        ? "This supplier file has already been prepared. Contact the CEO before any replacement export."
-                        : "Requires processing status, verified TeemDrop SKU, verified South Africa fulfilment, and a pipe-separated courier address."
-                    }
-                  >
-                    <Download className="mr-1.5 h-4 w-4" />
-                    TeemDrop XLSX
                   </Button>
                 </div>
               </div>
@@ -686,7 +907,6 @@ function Fulfilment() {
                     <option value="shipped">Shipped</option>
                     <option value="delivered">Delivered</option>
                     <option value="cancelled">Cancelled</option>
-                    <option value="refunded">Refunded</option>
                   </select>
                 </label>
                 <label className="text-xs text-muted-foreground">

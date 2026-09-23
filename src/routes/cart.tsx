@@ -62,14 +62,13 @@ const money = (value: number) =>
   `R${value.toLocaleString("en-ZA", { minimumFractionDigits: value % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
 
 function CartPage() {
-  const { user, session } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const { items, count, total, setQty, setComment, remove, clear, lineKey } = useCart();
   const [buyerName, setBuyerName] = useState("");
   const [buyerPhone, setBuyerPhone] = useState("");
   const [address, setAddress] = useState("");
   const [note, setNote] = useState("");
-  const [coupon, setCoupon] = useState("");
   const [method, setMethod] = useState<"courier" | "paxi" | "pickup">("courier");
   const [tier, setTier] = useState<DeliveryTier>("courier");
   const [pickupPoint, setPickupPoint] = useState("");
@@ -78,7 +77,6 @@ function CartPage() {
   const [confirmation, setConfirmation] = useState<{
     reference: string;
     total: number;
-    checkoutUrl?: string;
   } | null>(null);
   const placeOrder = useServerFn(createNiberDealzOrder);
   const selected = tierInfo[tier];
@@ -127,7 +125,7 @@ function CartPage() {
           delivery_method: method,
           delivery_address: address,
           note,
-          discount_code: coupon,
+          discount_code: "",
           delivery_tier: method === "pickup" ? "pickup" : tier,
           paxi_pickup_point: pickupPoint,
           terms_version: "2026-09",
@@ -157,11 +155,12 @@ function CartPage() {
         <SiteHeader />
         <main className="container mx-auto max-w-xl px-4 py-16 flex-1 text-center">
           <CheckCircle2 className="mx-auto h-14 w-14 text-emerald-600" />
-          <h1 className="font-display mt-4 text-3xl font-bold">Order received</h1>
+          <h1 className="font-display mt-4 text-3xl font-bold">Request received</h1>
           <p className="mt-3 text-muted-foreground">
-            Your NiberDealz order{" "}
+            Your NiberDealz order request{" "}
             <strong className="text-foreground">{confirmation.reference}</strong> has been received.{" "}
-            Card payments are not available yet. We will contact you after confirming your order.
+            Card payments are not available yet. We will review stock and contact you before
+            fulfilment.
           </p>
           <p className="font-display mt-4 text-2xl font-bold">{money(confirmation.total)}</p>
           <div className="mt-8 flex justify-center gap-3">
@@ -291,15 +290,6 @@ function CartPage() {
                   </div>
                 )}
                 <div>
-                  <Label htmlFor="coupon">Discount code</Label>
-                  <Input
-                    id="coupon"
-                    value={coupon}
-                    onChange={(e) => setCoupon(e.target.value.toUpperCase())}
-                    placeholder="Optional"
-                  />
-                </div>
-                <div>
                   <Label htmlFor="note">Order note</Label>
                   <Textarea
                     id="note"
@@ -325,8 +315,7 @@ function CartPage() {
                 </div>
                 {method === "courier" && (
                   <p className="text-xs text-muted-foreground">
-                    First qualifying paid order: free shipping within 48 hours of account creation,
-                    otherwise 25% off. Returning customers get free courier over R1,000.
+                    Any delivery offer is confirmed only after we review your order request.
                   </p>
                 )}
                 <div className="flex justify-between font-display text-xl font-bold pt-2">
@@ -369,8 +358,8 @@ function CartPage() {
                 {placing ? "Submitting order…" : "Submit order request"}
               </Button>
               <p className="mt-3 text-center text-xs text-muted-foreground">
-                We do not collect card details on this site. We will review stock and contact you
-                with payment instructions before fulfilment.
+                Card payments are not available on this site. We will review stock and contact you
+                about the next steps before fulfilment.
               </p>
             </aside>
           </div>

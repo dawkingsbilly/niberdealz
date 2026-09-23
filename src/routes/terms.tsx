@@ -1,5 +1,81 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteFooter, SiteHeader } from "@/components/site-header";
 import { SITE_NAME } from "@/lib/constants";
-export const Route = createFileRoute("/terms")({ head: () => ({ meta: [{ title: "Terms of service | NiberDealz" }, { name: "description", content: "Terms for shopping directly with NiberDealz." }] }), component: Terms });
-function Terms() { return <div className="min-h-screen flex flex-col"><SiteHeader /><article className="container mx-auto max-w-3xl flex-1 px-4 py-12 text-sm leading-relaxed"><h1 className="font-display text-3xl font-bold">Terms of service</h1><p className="mt-2 text-muted-foreground">Version 2026-09</p><p className="mt-6">These terms govern purchases and use of {SITE_NAME}. By using the site or placing an order, you agree to them.</p><h2 className="font-display mt-8 text-xl font-bold">1. Direct store</h2><p className="mt-3">{SITE_NAME} is the direct seller of products offered on this website. Product availability, prices and descriptions may change before an order is accepted.</p><h2 className="font-display mt-8 text-xl font-bold">2. Orders and payment</h2><p className="mt-3">Submitting an order request does not guarantee acceptance. We confirm availability and send payment instructions before fulfilment. An order is processed after payment has cleared and NiberDealz confirms it.</p><h2 className="font-display mt-8 text-xl font-bold">3. Delivery and collection</h2><p className="mt-3">Delivery options, timelines and fees are displayed at checkout. Courier delivery is door-to-door. PAXI collection requires a customer-selected PEP, Ackermans or Shoe City point, a valid ID and the SMS collection PIN. See <Link className="underline" to="/delivery">delivery information</Link> for the current options.</p><h2 className="font-display mt-8 text-xl font-bold">4. Returns &amp; exchanges</h2><p className="mt-3">Please contact us through the <Link className="underline" to="/contact">private contact form</Link> before returning an item, quoting your order reference. We will assess the request and provide return instructions where applicable. Nothing in these terms limits rights that cannot lawfully be excluded under the South African Consumer Protection Act, including applicable rights relating to defective goods, cooling-off or direct marketing transactions.</p><p className="mt-3">Products may be sourced from trusted suppliers for NiberDealz. NiberDealz remains your seller and your point of contact; supplier sourcing does not remove your statutory consumer rights.</p><h2 className="font-display mt-8 text-xl font-bold">5. Support</h2><p className="mt-3">For order support, use our <Link className="underline" to="/contact">private contact form</Link> and include your order reference where possible.</p><h2 className="font-display mt-8 text-xl font-bold">6. Use of the site</h2><p className="mt-3">Do not misuse the site, attempt unauthorised access, or interfere with ordering or payment processes. These terms are governed by applicable South African law.</p></article><SiteFooter /></div>; }
+
+export const Route = createFileRoute("/terms")({
+  head: () => ({
+    meta: [
+      { title: "Terms of service | NiberDealz" },
+      { name: "description", content: "Terms for shopping directly with NiberDealz." },
+    ],
+  }),
+  component: Terms,
+});
+
+function Terms() {
+  return (
+    <div className="min-h-screen flex flex-col">
+      <SiteHeader />
+      <article className="container mx-auto max-w-3xl flex-1 px-4 py-12 text-sm leading-relaxed">
+        <h1 className="font-display text-3xl font-bold">Terms of service</h1>
+        <p className="mt-2 text-muted-foreground">Version 2026-09</p>
+        <p className="mt-6">
+          These terms govern purchases and use of {SITE_NAME}. By using the site or submitting an
+          order request, you agree to them.
+        </p>
+        <h2 className="font-display mt-8 text-xl font-bold">1. Direct store</h2>
+        <p className="mt-3">
+          {SITE_NAME} is the direct seller of products offered on this website. Product
+          availability, prices and descriptions may change before an order request is accepted.
+        </p>
+        <h2 className="font-display mt-8 text-xl font-bold">2. Order requests and payment</h2>
+        <p className="mt-3">
+          Submitting an order request does not guarantee acceptance. Card payments are not available
+          through this site. We review availability and contact you about next steps before
+          fulfilment; no payment is collected when you submit an order request.
+        </p>
+        <h2 className="font-display mt-8 text-xl font-bold">3. Delivery and collection</h2>
+        <p className="mt-3">
+          Delivery options, timelines and fees are displayed at checkout. Courier delivery is
+          door-to-door. PAXI collection requires a customer-selected PEP, Ackermans or Shoe City
+          point, a valid ID and the SMS collection PIN. See{" "}
+          <Link className="underline" to="/delivery">
+            delivery information
+          </Link>{" "}
+          for the current options.
+        </p>
+        <h2 className="font-display mt-8 text-xl font-bold">4. Returns &amp; exchanges</h2>
+        <p className="mt-3">
+          Please contact us through the{" "}
+          <Link className="underline" to="/contact">
+            private contact form
+          </Link>{" "}
+          before returning an item, quoting your order reference. We will assess the request and
+          provide return instructions where applicable. Nothing in these terms limits rights that
+          cannot lawfully be excluded under the South African Consumer Protection Act, including
+          applicable rights relating to defective goods, cooling-off or direct marketing
+          transactions.
+        </p>
+        <p className="mt-3">
+          Products may be sourced from trusted suppliers for NiberDealz. NiberDealz remains your
+          seller and your point of contact; supplier sourcing does not remove your statutory
+          consumer rights.
+        </p>
+        <h2 className="font-display mt-8 text-xl font-bold">5. Support</h2>
+        <p className="mt-3">
+          For order support, use our{" "}
+          <Link className="underline" to="/contact">
+            private contact form
+          </Link>{" "}
+          and include your order reference where possible.
+        </p>
+        <h2 className="font-display mt-8 text-xl font-bold">6. Use of the site</h2>
+        <p className="mt-3">
+          Do not misuse the site, attempt unauthorised access, or interfere with ordering or payment
+          processes. These terms are governed by applicable South African law.
+        </p>
+      </article>
+      <SiteFooter />
+    </div>
+  );
+}
