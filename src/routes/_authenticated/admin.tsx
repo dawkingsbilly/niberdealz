@@ -47,14 +47,36 @@ export const Route = createFileRoute("/_authenticated/admin")({ component: Admin
 type Tab = "analytics" | "catalogue" | "products" | "fulfilment" | "admins";
 
 function Admin() {
-  const { roles, isLoading } = useAuth();
+  const { roles, isLoading, roleError } = useAuth();
   const [tab, setTab] = useState<Tab>("analytics");
   const isCEO = roles.includes("owner");
   const isAdmin = roles.includes("admin");
   if (isLoading)
     return (
-      <div className="grid min-h-screen place-items-center">
+      <div
+        className="grid min-h-screen place-items-center"
+        role="status"
+        aria-label="Checking staff access"
+      >
         <Loader2 className="animate-spin" />
+      </div>
+    );
+  if (roleError)
+    return (
+      <div className="flex min-h-screen flex-col">
+        <SiteHeader />
+        <main className="container mx-auto flex-1 px-4 py-20 text-center">
+          <ShieldCheck className="mx-auto h-8 w-8" />
+          <h1 className="mt-4 font-display text-2xl font-bold">We could not confirm your access</h1>
+          <p className="mx-auto mt-2 max-w-md text-muted-foreground">
+            Your sign-in is still active, but staff access could not be checked. Refresh the page or
+            sign in again before trying the admin workspace.
+          </p>
+          <Button className="mt-6" onClick={() => window.location.reload()}>
+            Try again
+          </Button>
+        </main>
+        <SiteFooter />
       </div>
     );
   if (!isCEO && !isAdmin)

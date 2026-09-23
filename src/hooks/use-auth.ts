@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -9,50 +9,76 @@ export interface AuthState {
   session: Session | null;
   roles: AppRole[];
   isLoading: boolean;
+  roleError: string | null;
 }
 
+const signedOutState: AuthState = {
+  user: null,
+  session: null,
+  roles: [],
+  isLoading: false,
+  roleError: null,
+};
+
 export function useAuth(): AuthState {
-  const [state, setState] = useState<AuthState>({
-    user: null,
-    session: null,
-    roles: [],
-    isLoading: true,
-  });
+  const [state, setState] = useState<AuthState>({ ...signedOutState, isLoading: true });
+  const requestId = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
 
-    const loadRoles = async (userId: string): Promise<AppRole[]> => {
-      const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
-      return (data ?? []).map((r) => r.role as AppRole);
+    const loadSession = async (session: Session | null) => {
+      const currentRequest = ++requestId.current;
+      if (!session?.user) {
+        if (!cancelled) setState(signedOutState);
+        return;
+      }
+
+      setState({ user: session.user, session, roles: [], isLoading: true, roleError: null });
+      // Auth events are raised while Supabase updates its internal state. Deferring the
+      // query avoids racing that update, while the request id prevents stale results
+      // from an earlier event overwriting a newer session.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      try {
+        const { data, error } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id);
+        if (error) throw error;
+        if (!cancelled && currentRequest === requestId.current) {
+          setState({
+            user: session.user,
+            session,
+            roles: (data ?? []).map((row) => row.role as AppRole),
+            isLoading: false,
+            roleError: null,
+          });
+        }
+      } catch (error) {
+        if (!cancelled && currentRequest === requestId.current) {
+          setState({
+            user: session.user,
+            session,
+            roles: [],
+            isLoading: false,
+            roleError:
+              error instanceof Error
+                ? error.message
+                : "We could not confirm your staff access. Please try again.",
+          });
+        }
+      }
     };
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (cancelled) return;
-      if (!session?.user) {
-        setState({ user: null, session: null, roles: [], isLoading: false });
-        return;
-      }
-      setState((s) => ({ ...s, user: session.user, session, isLoading: true }));
-      setTimeout(async () => {
-        const roles = await loadRoles(session.user.id);
-        if (!cancelled) setState({ user: session.user, session, roles, isLoading: false });
-      }, 0);
+      void loadSession(session);
     });
-
-    (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (cancelled) return;
-      if (!session?.user) {
-        setState({ user: null, session: null, roles: [], isLoading: false });
-        return;
-      }
-      const roles = await loadRoles(session.user.id);
-      if (!cancelled) setState({ user: session.user, session, roles, isLoading: false });
-    })();
+    void supabase.auth.getSession().then(({ data: { session } }) => loadSession(session));
 
     return () => {
       cancelled = true;
+      requestId.current += 1;
       sub.subscription.unsubscribe();
     };
   }, []);
