@@ -1,6 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { z } from "zod";
 import { ArrowRight, Menu, Search, ShoppingBag, ShoppingCart, UserRound, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
@@ -29,7 +30,12 @@ type CatalogProduct = Pick<
 
 type StoreCategory = Pick<Database["public"]["Tables"]["store_categories"]["Row"], "name">;
 
+const homeSearchSchema = z.object({
+  q: z.string().trim().max(100).optional().catch(undefined),
+});
+
 export const Route = createFileRoute("/")({
+  validateSearch: homeSearchSchema,
   head: () => ({
     meta: [
       { title: "NiberDealz | New season, your way" },
@@ -48,6 +54,11 @@ export const Route = createFileRoute("/")({
 function Header() {
   const [open, setOpen] = useState(false);
   const { count } = useCart();
+  const focusCatalogueSearch = () => {
+    const input = document.getElementById("catalogue-search");
+    input?.scrollIntoView({ behavior: "smooth", block: "center" });
+    input?.focus();
+  };
   return (
     <>
       <div className="border-b bg-background py-2 text-center text-[9px] font-semibold uppercase tracking-[.13em] sm:text-[10px]">
@@ -72,10 +83,14 @@ function Header() {
             NIBERDEALZ
           </Link>
           <div className="flex items-center gap-1">
-            <Button asChild variant="ghost" size="icon" aria-label="Search">
-              <a href="#shop">
-                <Search className="h-5 w-5" />
-              </a>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Search the catalogue"
+              onClick={focusCatalogueSearch}
+            >
+              <Search className="h-5 w-5" />
             </Button>
             <Button
               asChild
@@ -155,8 +170,17 @@ function Header() {
   );
 }
 function Home() {
-  const [q, setQ] = useState("");
+  const navigate = useNavigate({ from: Route.fullPath });
+  const { q: searchQuery } = Route.useSearch();
   const [category, setCategory] = useState("");
+  const q = searchQuery ?? "";
+  const setQ = (value: string) => {
+    void navigate({
+      search: (previous) => ({ ...previous, q: value.trim() || undefined }),
+      hash: "shop",
+      replace: true,
+    });
+  };
   const { data, isLoading } = useQuery({
     queryKey: ["niberdealz-catalog", q, category],
     queryFn: async () => {
@@ -266,6 +290,7 @@ function Home() {
             <div className="relative">
               <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
+                id="catalogue-search"
                 value={q}
                 onChange={(event) => setQ(event.target.value)}
                 className="h-12 rounded-none border-x-0 border-t-0 bg-transparent pl-10 shadow-none focus-visible:ring-0"
