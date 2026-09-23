@@ -20,6 +20,11 @@ const signedOutState: AuthState = {
   roleError: null,
 };
 
+// Keep the UI in step with the function middleware. Without this check, a session
+// that has just expired can still render as signed in while server actions correctly
+// reject its bearer token.
+const REFRESH_WINDOW_SECONDS = 60;
+
 export function useAuth(): AuthState {
   const [state, setState] = useState<AuthState>({ ...signedOutState, isLoading: true });
   const requestId = useRef(0);
@@ -27,10 +32,34 @@ export function useAuth(): AuthState {
   useEffect(() => {
     let cancelled = false;
 
-    const loadSession = async (session: Session | null) => {
+    const getUsableSession = async (session: Session | null) => {
+      if (!session) return null;
+      const expiresSoon =
+        !session.expires_at ||
+        session.expires_at <= Math.floor(Date.now() / 1000) + REFRESH_WINDOW_SECONDS;
+      if (!expiresSoon) return session;
+
+      const { data, error } = await supabase.auth.refreshSession();
+      if (!error && data.session) return data.session;
+
+      // Remove only this browser's unusable credentials. The account itself remains
+      // intact and the customer can sign in again without seeing a misleading API error.
+      await supabase.auth.signOut({ scope: "local" });
+      return null;
+    };
+
+    const loadSession = async (candidate: Session | null) => {
       const currentRequest = ++requestId.current;
+      let session: Session | null;
+      try {
+        session = await getUsableSession(candidate);
+      } catch {
+        await supabase.auth.signOut({ scope: "local" });
+        session = null;
+      }
+      if (cancelled || currentRequest !== requestId.current) return;
       if (!session?.user) {
-        if (!cancelled) setState(signedOutState);
+        setState(signedOutState);
         return;
       }
 
