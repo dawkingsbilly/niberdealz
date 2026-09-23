@@ -1,14 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-
 /**
- * Payment collection is intentionally off for the public release.
- * This endpoint is retained so no client can accidentally initiate an unvalidated provider flow.
+ * Yoco payment routes were removed intentionally.
+ * Keeping this file as a stub prevents stale imports or accidental runtime access.
  */
-export const Route = createFileRoute("/api/yoco/create-checkout")({
-  server: {
-    handlers: {
-      POST: async () =>
-        Response.json({ error: "Card payments are not available yet." }, { status: 503 }),
-    },
-  },
-});
+export {};

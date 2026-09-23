@@ -27,8 +27,6 @@ import { Route as AuthenticatedAffiliateRouteImport } from './routes/_authentica
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
-import { Route as ApiYocoWebhookRouteImport } from './routes/api/yoco/webhook'
-import { Route as ApiYocoCreateCheckoutRouteImport } from './routes/api/yoco/create-checkout'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 
 const TermsRoute = TermsRouteImport.update({
@@ -122,16 +120,6 @@ const Char91DotmcpChar93ListToolsRoute =
     path: '/.mcp/list-tools',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiYocoWebhookRoute = ApiYocoWebhookRouteImport.update({
-  id: '/api/yoco/webhook',
-  path: '/api/yoco/webhook',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiYocoCreateCheckoutRoute = ApiYocoCreateCheckoutRouteImport.update({
-  id: '/api/yoco/create-checkout',
-  path: '/api/yoco/create-checkout',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const Char91DotmcpChar93InvokeToolToolRoute =
   Char91DotmcpChar93InvokeToolToolRouteImport.update({
     id: '/.mcp/invoke-tool/$tool',
@@ -158,8 +146,6 @@ export interface FileRoutesByFullPath {
   '/affiliate': typeof AuthenticatedAffiliateRoute
   '/product/$id': typeof ProductIdRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
-  '/api/yoco/create-checkout': typeof ApiYocoCreateCheckoutRoute
-  '/api/yoco/webhook': typeof ApiYocoWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -180,8 +166,6 @@ export interface FileRoutesByTo {
   '/affiliate': typeof AuthenticatedAffiliateRoute
   '/product/$id': typeof ProductIdRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
-  '/api/yoco/create-checkout': typeof ApiYocoCreateCheckoutRoute
-  '/api/yoco/webhook': typeof ApiYocoWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -204,8 +188,6 @@ export interface FileRoutesById {
   '/_authenticated/affiliate': typeof AuthenticatedAffiliateRoute
   '/product/$id': typeof ProductIdRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
-  '/api/yoco/create-checkout': typeof ApiYocoCreateCheckoutRoute
-  '/api/yoco/webhook': typeof ApiYocoWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -228,8 +210,6 @@ export interface FileRouteTypes {
     | '/affiliate'
     | '/product/$id'
     | '/.mcp/invoke-tool/$tool'
-    | '/api/yoco/create-checkout'
-    | '/api/yoco/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -250,8 +230,6 @@ export interface FileRouteTypes {
     | '/affiliate'
     | '/product/$id'
     | '/.mcp/invoke-tool/$tool'
-    | '/api/yoco/create-checkout'
-    | '/api/yoco/webhook'
   id:
     | '__root__'
     | '/'
@@ -273,8 +251,6 @@ export interface FileRouteTypes {
     | '/_authenticated/affiliate'
     | '/product/$id'
     | '/.mcp/invoke-tool/$tool'
-    | '/api/yoco/create-checkout'
-    | '/api/yoco/webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -295,8 +271,6 @@ export interface RootRouteChildren {
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   ProductIdRoute: typeof ProductIdRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
-  ApiYocoCreateCheckoutRoute: typeof ApiYocoCreateCheckoutRoute
-  ApiYocoWebhookRoute: typeof ApiYocoWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -427,20 +401,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/yoco/webhook': {
-      id: '/api/yoco/webhook'
-      path: '/api/yoco/webhook'
-      fullPath: '/api/yoco/webhook'
-      preLoaderRoute: typeof ApiYocoWebhookRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/yoco/create-checkout': {
-      id: '/api/yoco/create-checkout'
-      path: '/api/yoco/create-checkout'
-      fullPath: '/api/yoco/create-checkout'
-      preLoaderRoute: typeof ApiYocoCreateCheckoutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/.mcp/invoke-tool/$tool': {
       id: '/.mcp/invoke-tool/$tool'
       path: '/.mcp/invoke-tool/$tool'
@@ -483,8 +443,6 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   ProductIdRoute: ProductIdRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
-  ApiYocoCreateCheckoutRoute: ApiYocoCreateCheckoutRoute,
-  ApiYocoWebhookRoute: ApiYocoWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
