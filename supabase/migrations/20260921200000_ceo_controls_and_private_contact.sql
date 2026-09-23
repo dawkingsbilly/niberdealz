@@ -2,7 +2,10 @@
 CREATE UNIQUE INDEX IF NOT EXISTS one_owner_only ON public.user_roles (role) WHERE role = 'owner';
 
 DROP POLICY IF EXISTS "staff read all NiberDealz orders" ON public.orders;
+DROP POLICY IF EXISTS "ceo reads all orders" ON public.orders;
 DROP POLICY IF EXISTS "staff read all order items" ON public.order_items;
+DROP POLICY IF EXISTS "ceo reads all order items" ON public.order_items;
+DROP POLICY IF EXISTS "customers read own order items" ON public.order_items;
 DROP POLICY IF EXISTS "Order parties view items" ON public.order_items;
 CREATE POLICY "ceo reads all orders" ON public.orders FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'owner'));
 CREATE POLICY "ceo reads all order items" ON public.order_items FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'owner'));
