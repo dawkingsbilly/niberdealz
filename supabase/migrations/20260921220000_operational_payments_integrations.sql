@@ -209,8 +209,10 @@ ALTER TABLE public.product_reviews ADD COLUMN IF NOT EXISTS is_published boolean
 ALTER TABLE public.product_reviews ADD COLUMN IF NOT EXISTS moderated_by uuid NULL REFERENCES auth.users(id) ON DELETE SET NULL;
 ALTER TABLE public.product_reviews ADD COLUMN IF NOT EXISTS moderated_at timestamptz NULL;
 DROP POLICY IF EXISTS "Anyone can read reviews" ON public.product_reviews;
+DROP POLICY IF EXISTS "public reads published reviews" ON public.product_reviews;
 CREATE POLICY "public reads published reviews" ON public.product_reviews FOR SELECT TO anon, authenticated USING (is_published = true);
 DROP POLICY IF EXISTS "User writes own review" ON public.product_reviews;
+DROP POLICY IF EXISTS "paid buyer writes one review" ON public.product_reviews;
 CREATE POLICY "paid buyer writes one review" ON public.product_reviews FOR INSERT TO authenticated
 WITH CHECK (
   auth.uid() = user_id
