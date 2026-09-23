@@ -2,23 +2,277 @@ import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-ro
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, Check, Minus, Plus, ShoppingCart, ShieldCheck, Star, Truck } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  Minus,
+  Plus,
+  ShoppingCart,
+  ShieldCheck,
+  Star,
+  Truck,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { SiteHeader, SiteFooter } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 import { addToCart } from "@/lib/cart";
 
+type ProductSeed = Pick<
+  Database["public"]["Tables"]["products"]["Row"],
+  | "id"
+  | "title"
+  | "description"
+  | "price_zar"
+  | "sale_price_zar"
+  | "image_url"
+  | "category"
+  | "brand"
+  | "is_active"
+  | "status"
+>;
+
+type ProductDetail = Pick<
+  Database["public"]["Tables"]["products"]["Row"],
+  | "id"
+  | "title"
+  | "description"
+  | "price_zar"
+  | "sale_price_zar"
+  | "image_url"
+  | "images"
+  | "category"
+  | "brand"
+  | "stock"
+  | "is_sold"
+  | "is_active"
+  | "size"
+  | "color"
+  | "variations"
+  | "tags"
+>;
+
 export const Route = createFileRoute("/product/$id")({
-  loader: async ({ params }) => { const { data } = await supabase.from("products").select("id,title,description,price_zar,sale_price_zar,image_url,category,brand,is_active,status").eq("id", params.id).eq("status", "approved").eq("is_active", true).maybeSingle(); return { seed: data as any }; },
-  head: ({ params, loaderData }) => { const p: any = loaderData?.seed; const url = `https://www.niberdealz.co.za/product/${params.id}`; const title = p ? `${p.title} | NiberDealz` : "Product | NiberDealz"; return { meta: [{ title }, { name: "description", content: p?.description?.slice(0, 155) ?? "Shop directly from NiberDealz." }, { property: "og:type", content: "product" }, { property: "og:url", content: url }, ...(p?.image_url ? [{ property: "og:image", content: p.image_url }] : [])], links: [{ rel: "canonical", href: url }] }; },
+  loader: async ({ params }) => {
+    const { data } = await supabase
+      .from("products")
+      .select(
+        "id,title,description,price_zar,sale_price_zar,image_url,category,brand,is_active,status",
+      )
+      .eq("id", params.id)
+      .eq("status", "approved")
+      .eq("is_active", true)
+      .maybeSingle();
+    return { seed: data as ProductSeed | null };
+  },
+  head: ({ params, loaderData }) => {
+    const p = loaderData?.seed;
+    const url = `https://www.niberdealz.co.za/product/${params.id}`;
+    const title = p ? `${p.title} | NiberDealz` : "Product | NiberDealz";
+    return {
+      meta: [
+        { title },
+        {
+          name: "description",
+          content: p?.description?.slice(0, 155) ?? "Shop directly from NiberDealz.",
+        },
+        { property: "og:type", content: "product" },
+        { property: "og:url", content: url },
+        ...(p?.image_url ? [{ property: "og:image", content: p.image_url }] : []),
+      ],
+      links: [{ rel: "canonical", href: url }],
+    };
+  },
   component: ProductDetail,
 });
 function ProductDetail() {
-  const { id } = Route.useParams(); const navigate = useNavigate(); const [image, setImage] = useState(0); const [qty, setQty] = useState(1);
-  const { data: product, isLoading } = useQuery({ queryKey: ["niberdealz-product", id], queryFn: async () => { const { data, error } = await supabase.from("products").select("id,title,description,price_zar,sale_price_zar,image_url,images,category,brand,stock,is_sold,is_active,size,color,variations,tags").eq("id", id).eq("status", "approved").eq("is_active", true).maybeSingle(); if (error) throw error; if (!data) throw notFound(); return data as any; } });
-  if (isLoading) return <div className="min-h-screen flex flex-col"><SiteHeader /><div className="container mx-auto flex-1 px-4 py-16"><div className="h-96 animate-pulse rounded-2xl bg-muted" /></div><SiteFooter /></div>;
+  const { id } = Route.useParams();
+  const navigate = useNavigate();
+  const [image, setImage] = useState(0);
+  const [qty, setQty] = useState(1);
+  const { data: product, isLoading } = useQuery({
+    queryKey: ["niberdealz-product", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select(
+          "id,title,description,price_zar,sale_price_zar,image_url,images,category,brand,stock,is_sold,is_active,size,color,variations,tags",
+        )
+        .eq("id", id)
+        .eq("status", "approved")
+        .eq("is_active", true)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) throw notFound();
+      return data as ProductDetail;
+    },
+  });
+  if (isLoading)
+    return (
+      <div className="min-h-screen flex flex-col">
+        <SiteHeader />
+        <div className="container mx-auto flex-1 px-4 py-16">
+          <div className="h-96 animate-pulse rounded-2xl bg-muted" />
+        </div>
+        <SiteFooter />
+      </div>
+    );
   if (!product) return null;
-  const images = Array.from(new Set([product.image_url, ...(product.images ?? [])].filter(Boolean))) as string[]; const soldOut = product.is_sold || product.stock === 0; const price = Number(product.sale_price_zar ?? product.price_zar);
-  const add = () => { if (soldOut) return; addToCart({ product_id: product.id, title: product.title, price_zar: price, image_url: product.image_url ?? null, size: product.size ?? null, color: product.color ?? null, qty, comment: "" }); toast.success(`${product.title} added to cart`); };
-  return <div className="min-h-screen flex flex-col"><SiteHeader /><main className="container mx-auto max-w-6xl flex-1 px-4 py-7"><Button variant="ghost" size="sm" onClick={() => navigate({ to: "/" })} className="mb-5 -ml-2"><ArrowLeft className="mr-1 h-4 w-4" />Back to shop</Button><div className="grid gap-8 lg:grid-cols-2"><section><div className="aspect-square overflow-hidden rounded-2xl bg-muted">{images[image] ? <img src={images[image]} alt={product.title} className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center text-sm text-muted-foreground">No product image</div>}</div>{images.length > 1 && <div className="mt-3 flex gap-2 overflow-auto">{images.map((src, index) => <button key={src} onClick={() => setImage(index)} className={`h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 ${index === image ? "border-foreground" : "border-transparent"}`}><img src={src} alt="" className="h-full w-full object-cover" /></button>)}</div>}</section><section><p className="text-xs font-semibold uppercase tracking-wider text-[color:var(--deal)]">{product.category}</p>{product.brand && <p className="mt-2 text-sm text-muted-foreground">{product.brand}</p>}<h1 className="font-display mt-1 text-3xl font-bold md:text-4xl">{product.title}</h1><div className="mt-4 flex items-baseline gap-3"><span className="font-display text-3xl font-bold">R{price.toLocaleString("en-ZA")}</span>{product.sale_price_zar != null && <span className="text-muted-foreground line-through">R{Number(product.price_zar).toLocaleString("en-ZA")}</span>}</div>{typeof product.stock === "number" && <p className={`mt-3 text-sm font-medium ${product.stock <= 5 ? "text-destructive" : "text-emerald-700"}`}>{soldOut ? "Out of stock" : product.stock <= 5 ? `Only ${product.stock} left` : "In stock"}</p>}<div className="mt-7 rounded-2xl border bg-card p-4"><div className="flex items-center justify-between"><span className="font-semibold">Quantity</span><div className="flex items-center gap-2"><Button variant="outline" size="icon" disabled={qty <= 1 || soldOut} onClick={() => setQty(qty - 1)}><Minus className="h-4 w-4" /></Button><span className="w-6 text-center font-semibold">{qty}</span><Button variant="outline" size="icon" disabled={soldOut || (typeof product.stock === "number" && qty >= product.stock)} onClick={() => setQty(qty + 1)}><Plus className="h-4 w-4" /></Button></div></div><Button size="lg" className="mt-4 w-full" disabled={soldOut} onClick={add}><ShoppingCart className="mr-2 h-5 w-5" />{soldOut ? "Out of stock" : "Add to cart"}</Button><Button asChild size="lg" variant="outline" className="mt-2 w-full"><Link to="/cart">Go to checkout</Link></Button></div><div className="mt-5 grid gap-3 rounded-2xl bg-secondary/45 p-4 text-sm"><p className="flex gap-2"><ShieldCheck className="h-5 w-5 shrink-0 text-[color:var(--deal)]" />Secure checkout directly with NiberDealz</p><p className="flex gap-2"><Truck className="h-5 w-5 shrink-0 text-[color:var(--deal)]" />Courier, PAXI or collection options</p><p className="flex gap-2"><Check className="h-5 w-5 shrink-0 text-[color:var(--deal)]" />Order updates in your NiberDealz account</p></div><div className="mt-8"><h2 className="font-display text-xl font-bold">Description</h2><p className="mt-3 whitespace-pre-line leading-relaxed text-foreground/80">{product.description}</p></div>{Array.isArray(product.tags) && product.tags.length > 0 && <div className="mt-6 flex flex-wrap gap-2">{product.tags.map((tag: string) => <span key={tag} className="rounded-full bg-muted px-3 py-1 text-xs">{tag}</span>)}</div>}</section></div></main><SiteFooter /></div>;
+  const images = Array.from(
+    new Set([product.image_url, ...(product.images ?? [])].filter(Boolean)),
+  ) as string[];
+  const soldOut = product.is_sold || product.stock === 0;
+  const price = Number(product.sale_price_zar ?? product.price_zar);
+  const add = () => {
+    if (soldOut) return;
+    addToCart({
+      product_id: product.id,
+      title: product.title,
+      price_zar: price,
+      image_url: product.image_url ?? null,
+      size: product.size ?? null,
+      color: product.color ?? null,
+      qty,
+      comment: "",
+    });
+    toast.success(`${product.title} added to cart`);
+  };
+  return (
+    <div className="min-h-screen flex flex-col">
+      <SiteHeader />
+      <main className="container mx-auto max-w-6xl flex-1 px-4 py-7">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate({ to: "/" })}
+          className="mb-5 -ml-2"
+        >
+          <ArrowLeft className="mr-1 h-4 w-4" />
+          Back to shop
+        </Button>
+        <div className="grid gap-8 lg:grid-cols-2">
+          <section>
+            <div className="aspect-square overflow-hidden rounded-2xl bg-muted">
+              {images[image] ? (
+                <img
+                  src={images[image]}
+                  alt={product.title}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="grid h-full place-items-center text-sm text-muted-foreground">
+                  No product image
+                </div>
+              )}
+            </div>
+            {images.length > 1 && (
+              <div className="mt-3 flex gap-2 overflow-auto">
+                {images.map((src, index) => (
+                  <button
+                    key={src}
+                    onClick={() => setImage(index)}
+                    className={`h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 ${index === image ? "border-foreground" : "border-transparent"}`}
+                  >
+                    <img src={src} alt="" className="h-full w-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+          <section>
+            <p className="text-xs font-semibold uppercase tracking-wider text-[color:var(--deal)]">
+              {product.category}
+            </p>
+            {product.brand && <p className="mt-2 text-sm text-muted-foreground">{product.brand}</p>}
+            <h1 className="font-display mt-1 text-3xl font-bold md:text-4xl">{product.title}</h1>
+            <div className="mt-4 flex items-baseline gap-3">
+              <span className="font-display text-3xl font-bold">
+                R{price.toLocaleString("en-ZA")}
+              </span>
+              {product.sale_price_zar != null && (
+                <span className="text-muted-foreground line-through">
+                  R{Number(product.price_zar).toLocaleString("en-ZA")}
+                </span>
+              )}
+            </div>
+            {typeof product.stock === "number" && (
+              <p
+                className={`mt-3 text-sm font-medium ${product.stock <= 5 ? "text-destructive" : "text-emerald-700"}`}
+              >
+                {soldOut
+                  ? "Out of stock"
+                  : product.stock <= 5
+                    ? `Only ${product.stock} left`
+                    : "In stock"}
+              </p>
+            )}
+            <div className="mt-7 rounded-2xl border bg-card p-4">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold">Quantity</span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    disabled={qty <= 1 || soldOut}
+                    onClick={() => setQty(qty - 1)}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <span className="w-6 text-center font-semibold">{qty}</span>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    disabled={
+                      soldOut || (typeof product.stock === "number" && qty >= product.stock)
+                    }
+                    onClick={() => setQty(qty + 1)}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <Button size="lg" className="mt-4 w-full" disabled={soldOut} onClick={add}>
+                <ShoppingCart className="mr-2 h-5 w-5" />
+                {soldOut ? "Out of stock" : "Add to cart"}
+              </Button>
+              <Button asChild size="lg" variant="outline" className="mt-2 w-full">
+                <Link to="/cart">Go to checkout</Link>
+              </Button>
+            </div>
+            <div className="mt-5 grid gap-3 rounded-2xl bg-secondary/45 p-4 text-sm">
+              <p className="flex gap-2">
+                <ShieldCheck className="h-5 w-5 shrink-0 text-[color:var(--deal)]" />
+                Secure checkout directly with NiberDealz
+              </p>
+              <p className="flex gap-2">
+                <Truck className="h-5 w-5 shrink-0 text-[color:var(--deal)]" />
+                Courier, PAXI or collection options · delivery timing is confirmed after order
+                review
+              </p>
+              <p className="flex gap-2">
+                <Check className="h-5 w-5 shrink-0 text-[color:var(--deal)]" />
+                Order updates in your NiberDealz account
+              </p>
+            </div>
+            <div className="mt-8">
+              <h2 className="font-display text-xl font-bold">Description</h2>
+              <p className="mt-3 whitespace-pre-line leading-relaxed text-foreground/80">
+                {product.description}
+              </p>
+            </div>
+            {Array.isArray(product.tags) && product.tags.length > 0 && (
+              <div className="mt-6 flex flex-wrap gap-2">
+                {product.tags.map((tag: string) => (
+                  <span key={tag} className="rounded-full bg-muted px-3 py-1 text-xs">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+      </main>
+      <SiteFooter />
+    </div>
+  );
 }

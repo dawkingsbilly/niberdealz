@@ -185,6 +185,12 @@ function OrdersPage() {
                       {money(order.delivery_fee_zar)}
                     </p>
                   )}
+                  {Number(order.shipping_discount_zar) > 0 && (
+                    <p className="text-success">
+                      <span className="text-muted-foreground">Shipping offer:</span> −
+                      {money(order.shipping_discount_zar)}
+                    </p>
+                  )}
                   <p className="font-display text-lg font-bold">Total {money(order.total_zar)}</p>
                   <p className="pt-1 text-xs text-muted-foreground">
                     Card payments are not available on this site. NiberDealz will contact you after

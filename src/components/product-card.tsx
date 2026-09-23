@@ -66,6 +66,13 @@ export function ProductCard({ p }: { p: ProductCardData }) {
             <span className="text-xs text-muted-foreground line-through">{money(p.price_zar)}</span>
           )}
         </div>
+        <p className="mt-1 pr-9 text-[11px] text-muted-foreground">
+          {unavailable
+            ? "Currently unavailable"
+            : typeof p.stock === "number"
+              ? `${p.stock} available · delivery options at checkout`
+              : "Available · delivery options at checkout"}
+        </p>
         <button
           onClick={() =>
             !unavailable &&

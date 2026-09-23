@@ -24,6 +24,8 @@ export type CustomerOrder = {
   paxi_pickup_point: string;
   delivery_address: string;
   delivery_fee_zar: number;
+  shipping_discount_zar: number;
+  shipping_promotion_status: string;
   subtotal_zar: number;
   discount_zar: number;
   total_zar: number;
@@ -60,7 +62,7 @@ export const listMyOrders = createServerFn({ method: "POST" })
     const { data, error } = await db
       .from("orders")
       .select(
-        "id,reference,created_at,status,delivery_method,delivery_days,delivery_tier,paxi_pickup_point,delivery_address,delivery_fee_zar,subtotal_zar,discount_zar,total_zar,coupon_code,order_items(id,product_id,title,unit_price_zar,qty,size,color,comment,image_url)",
+        "id,reference,created_at,status,delivery_method,delivery_days,delivery_tier,paxi_pickup_point,delivery_address,delivery_fee_zar,shipping_discount_zar,shipping_promotion_status,subtotal_zar,discount_zar,total_zar,coupon_code,order_items(id,product_id,title,unit_price_zar,qty,size,color,comment,image_url)",
       )
       .eq("buyer_id", context.userId)
       .order("created_at", { ascending: false });

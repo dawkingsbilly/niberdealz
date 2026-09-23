@@ -77,6 +77,8 @@ function CartPage() {
   const [confirmation, setConfirmation] = useState<{
     reference: string;
     total: number;
+    deliveryFee: number;
+    shippingDiscount: number;
   } | null>(null);
   const placeOrder = useServerFn(createNiberDealzOrder);
   const selected = tierInfo[tier];
@@ -134,6 +136,8 @@ function CartPage() {
         order_id?: string;
         reference: string;
         total_zar: number | string;
+        delivery_fee_zar: number | string;
+        shipping_discount_zar: number | string;
       };
       if (!result.order_id) throw new Error("We could not create your order. Please try again.");
       // Payment collection is deliberately disabled until the Yoco release is validated.
@@ -142,6 +146,8 @@ function CartPage() {
       setConfirmation({
         reference: result.reference,
         total: Number(result.total_zar),
+        deliveryFee: Number(result.delivery_fee_zar),
+        shippingDiscount: Number(result.shipping_discount_zar),
       });
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : "Could not place order.");
@@ -162,6 +168,16 @@ function CartPage() {
             Card payments are not available yet. We will review stock and contact you before
             fulfilment.
           </p>
+          {confirmation.shippingDiscount > 0 && (
+            <p className="mt-3 text-sm font-medium text-emerald-700">
+              Shipping offer applied: −{money(confirmation.shippingDiscount)}
+            </p>
+          )}
+          {confirmation.deliveryFee > 0 && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Delivery {money(confirmation.deliveryFee)}
+            </p>
+          )}
           <p className="font-display mt-4 text-2xl font-bold">{money(confirmation.total)}</p>
           <div className="mt-8 flex justify-center gap-3">
             <Button asChild variant="outline">
@@ -313,9 +329,10 @@ function CartPage() {
                   </span>
                   <span>{method === "pickup" ? "Confirmed with order" : money(displayedFee)}</span>
                 </div>
-                {method === "courier" && (
+                {method !== "pickup" && (
                   <p className="text-xs text-muted-foreground">
-                    Any delivery offer is confirmed only after we review your order request.
+                    First-order shipping offers, if eligible, are calculated securely when you
+                    submit your request.
                   </p>
                 )}
                 <div className="flex justify-between font-display text-xl font-bold pt-2">
