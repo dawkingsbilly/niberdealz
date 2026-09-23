@@ -15,7 +15,7 @@ Add these as **server-only** values in the same hosting project that runs the Ta
 | `YOCO_SECRET_KEY` | Checkout API bearer credential | Yoco Checkout API → How to connect → **Test secret key** (`sk_test_...`) |
 | `YOCO_WEBHOOK_SECRET` | Signed event verification | Returned **once** by Yoco when registering the webhook (`whsec_...`) |
 | `SUPABASE_URL` | Server database endpoint | Supabase project settings |
-| `SUPABASE_ANON_KEY` | Server-side token verification client | Supabase project settings |
+| `SUPABASE_PUBLISHABLE_KEY` | Server-side token verification client (must use this exact name, not `SUPABASE_ANON_KEY`) | Supabase project settings |
 | `SUPABASE_SERVICE_ROLE_KEY` | Verified webhook database work only | Supabase project settings; server-only |
 
 The browser configuration remains limited to `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, and `VITE_SUPABASE_PROJECT_ID`.
