@@ -246,6 +246,44 @@ export type Database = {
         }
         Relationships: []
       }
+      consent_records: {
+        Row: {
+          consent_type: string
+          context: string
+          created_at: string
+          id: string
+          order_id: string | null
+          policy_version: string
+          user_id: string | null
+        }
+        Insert: {
+          consent_type: string
+          context: string
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          policy_version: string
+          user_id?: string | null
+        }
+        Update: {
+          consent_type?: string
+          context?: string
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          policy_version?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consent_records_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_requests: {
         Row: {
           created_at: string
@@ -372,6 +410,35 @@ export type Database = {
         }
         Relationships: []
       }
+      order_item_supplier_sources: {
+        Row: {
+          order_item_id: string
+          original_price_zar: number | null
+          source_url: string
+          supplier_name: string
+        }
+        Insert: {
+          order_item_id: string
+          original_price_zar?: number | null
+          source_url?: string
+          supplier_name?: string
+        }
+        Update: {
+          order_item_id?: string
+          original_price_zar?: number | null
+          source_url?: string
+          supplier_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_item_supplier_sources_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: true
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           color: string | null
@@ -441,12 +508,20 @@ export type Database = {
           delivery_days: number | null
           delivery_fee_zar: number
           delivery_method: string
+          delivery_tier: string | null
           discount_zar: number
+          fulfilment_status: string
+          fulfilment_updated_at: string | null
+          fulfilment_updated_by: string | null
           id: string
+          inventory_restocked_at: string | null
           note: string
+          paxi_pickup_point: string
           payment_status: string
           points_used: number
           reference: string
+          shipping_discount_zar: number
+          shipping_promotion_status: string
           status: string
           subtotal_zar: number
           total_zar: number
@@ -464,12 +539,20 @@ export type Database = {
           delivery_days?: number | null
           delivery_fee_zar?: number
           delivery_method?: string
+          delivery_tier?: string | null
           discount_zar?: number
+          fulfilment_status?: string
+          fulfilment_updated_at?: string | null
+          fulfilment_updated_by?: string | null
           id?: string
+          inventory_restocked_at?: string | null
           note?: string
+          paxi_pickup_point?: string
           payment_status?: string
           points_used?: number
           reference: string
+          shipping_discount_zar?: number
+          shipping_promotion_status?: string
           status?: string
           subtotal_zar?: number
           total_zar?: number
@@ -487,12 +570,20 @@ export type Database = {
           delivery_days?: number | null
           delivery_fee_zar?: number
           delivery_method?: string
+          delivery_tier?: string | null
           discount_zar?: number
+          fulfilment_status?: string
+          fulfilment_updated_at?: string | null
+          fulfilment_updated_by?: string | null
           id?: string
+          inventory_restocked_at?: string | null
           note?: string
+          paxi_pickup_point?: string
           payment_status?: string
           points_used?: number
           reference?: string
+          shipping_discount_zar?: number
+          shipping_promotion_status?: string
           status?: string
           subtotal_zar?: number
           total_zar?: number
@@ -636,6 +727,41 @@ export type Database = {
             columns: ["vendor_id"]
             isOneToOne: false
             referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_supplier_sources: {
+        Row: {
+          original_price_zar: number | null
+          product_id: string
+          source_url: string
+          supplier_name: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          original_price_zar?: number | null
+          product_id: string
+          source_url?: string
+          supplier_name?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          original_price_zar?: number | null
+          product_id?: string
+          source_url?: string
+          supplier_name?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_supplier_sources_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
@@ -878,6 +1004,41 @@ export type Database = {
             columns: ["vendor_id"]
             isOneToOne: false
             referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shipping_promotion_claims: {
+        Row: {
+          created_at: string
+          id: string
+          identity_key: string
+          order_id: string
+          promotion_kind: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          identity_key: string
+          order_id: string
+          promotion_kind: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          identity_key?: string
+          order_id?: string
+          promotion_kind?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shipping_promotion_claims_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
         ]
@@ -1241,14 +1402,19 @@ export type Database = {
           p_buyer_phone: string
           p_delivery_address: string
           p_delivery_method: string
+          p_delivery_tier?: string
           p_discount_code?: string
           p_items: Json
           p_note?: string
+          p_paxi_pickup_point?: string
+          p_terms_version?: string
         }
         Returns: {
+          delivery_fee_zar: number
           order_id: string
           payment_status: string
           reference: string
+          shipping_discount_zar: number
           total_zar: number
         }[]
       }
@@ -1262,6 +1428,14 @@ export type Database = {
       plan_product_limit: {
         Args: { _plan: Database["public"]["Enums"]["plan_tier"] }
         Returns: number
+      }
+      set_niberdealz_order_status: {
+        Args: { p_actor_id: string; p_order_id: string; p_status: string }
+        Returns: {
+          promotion_status: string
+          shipping_discount_zar: number
+          total_zar: number
+        }[]
       }
     }
     Enums: {
