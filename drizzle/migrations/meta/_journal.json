@@ -29,6 +29,13 @@
       "when": 1792028073099,
       "tag": "0003_operational_payments_integrations",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792256987458,
+      "tag": "0004_payment_safety_and_catalogue_review",
+      "breakpoints": true
     }
   ]
 }

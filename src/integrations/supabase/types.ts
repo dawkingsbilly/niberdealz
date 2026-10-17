@@ -314,6 +314,71 @@ export type Database = {
           },
         ]
       }
+      catalogue_review_items: {
+        Row: {
+          catalogue_import_id: string | null
+          category: string
+          created_at: string
+          description: string
+          id: string
+          image_url: string | null
+          markup_percent: number
+          original_price_zar: number | null
+          proposed_price_zar: number | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_url: string | null
+          status: string
+          supplier_name: string | null
+          supplier_sku: string | null
+          title: string
+        }
+        Insert: {
+          catalogue_import_id?: string | null
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          image_url?: string | null
+          markup_percent?: number
+          original_price_zar?: number | null
+          proposed_price_zar?: number | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_url?: string | null
+          status?: string
+          supplier_name?: string | null
+          supplier_sku?: string | null
+          title: string
+        }
+        Update: {
+          catalogue_import_id?: string | null
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          image_url?: string | null
+          markup_percent?: number
+          original_price_zar?: number | null
+          proposed_price_zar?: number | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_url?: string | null
+          status?: string
+          supplier_name?: string | null
+          supplier_sku?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalogue_review_items_catalogue_import_id_fkey"
+            columns: ["catalogue_import_id"]
+            isOneToOne: false
+            referencedRelation: "catalogue_imports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       consent_records: {
         Row: {
           consent_type: string
@@ -967,6 +1032,41 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_webhook_events: {
+        Row: {
+          attempt_id: string | null
+          outcome: string
+          processed_at: string | null
+          provider: string
+          provider_event_id: string
+          received_at: string
+        }
+        Insert: {
+          attempt_id?: string | null
+          outcome?: string
+          processed_at?: string | null
+          provider?: string
+          provider_event_id: string
+          received_at?: string
+        }
+        Update: {
+          attempt_id?: string | null
+          outcome?: string
+          processed_at?: string | null
+          provider?: string
+          provider_event_id?: string
+          received_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_webhook_events_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "payment_attempts"
             referencedColumns: ["id"]
           },
         ]
