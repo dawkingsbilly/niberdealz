@@ -57,6 +57,13 @@
       "when": 1792257041711,
       "tag": "0007_payment_free_order_request_safeguards",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792257076611,
+      "tag": "0008_first_order_shipping_promotion",
+      "breakpoints": true
     }
   ]
 }
