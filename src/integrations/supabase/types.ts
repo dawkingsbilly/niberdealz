@@ -267,6 +267,41 @@ export type Database = {
         }
         Relationships: []
       }
+      catalogue_import_errors: {
+        Row: {
+          catalogue_import_id: string
+          created_at: string
+          id: string
+          message: string
+          row_number: number
+          source_key: string | null
+        }
+        Insert: {
+          catalogue_import_id: string
+          created_at?: string
+          id?: string
+          message: string
+          row_number: number
+          source_key?: string | null
+        }
+        Update: {
+          catalogue_import_id?: string
+          created_at?: string
+          id?: string
+          message?: string
+          row_number?: number
+          source_key?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalogue_import_errors_catalogue_import_id_fkey"
+            columns: ["catalogue_import_id"]
+            isOneToOne: false
+            referencedRelation: "catalogue_imports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       catalogue_imports: {
         Row: {
           completed_at: string | null
@@ -316,58 +351,79 @@ export type Database = {
       }
       catalogue_review_items: {
         Row: {
+          brand: string
           catalogue_import_id: string | null
           category: string
           created_at: string
           description: string
           id: string
           image_url: string | null
+          images: string[]
           markup_percent: number
           original_price_zar: number | null
           proposed_price_zar: number | null
           reviewed_at: string | null
           reviewed_by: string | null
+          source_checked_at: string | null
+          source_key: string | null
           source_url: string | null
           status: string
+          stock: number | null
           supplier_name: string | null
           supplier_sku: string | null
+          tags: string[]
           title: string
+          variations: Json
         }
         Insert: {
+          brand?: string
           catalogue_import_id?: string | null
           category?: string
           created_at?: string
           description?: string
           id?: string
           image_url?: string | null
+          images?: string[]
           markup_percent?: number
           original_price_zar?: number | null
           proposed_price_zar?: number | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          source_checked_at?: string | null
+          source_key?: string | null
           source_url?: string | null
           status?: string
+          stock?: number | null
           supplier_name?: string | null
           supplier_sku?: string | null
+          tags?: string[]
           title: string
+          variations?: Json
         }
         Update: {
+          brand?: string
           catalogue_import_id?: string | null
           category?: string
           created_at?: string
           description?: string
           id?: string
           image_url?: string | null
+          images?: string[]
           markup_percent?: number
           original_price_zar?: number | null
           proposed_price_zar?: number | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          source_checked_at?: string | null
+          source_key?: string | null
           source_url?: string | null
           status?: string
+          stock?: number | null
           supplier_name?: string | null
           supplier_sku?: string | null
+          tags?: string[]
           title?: string
+          variations?: Json
         }
         Relationships: [
           {
@@ -734,18 +790,21 @@ export type Database = {
           original_price_zar: number | null
           source_url: string
           supplier_name: string
+          supplier_sku: string | null
         }
         Insert: {
           order_item_id: string
           original_price_zar?: number | null
           source_url?: string
           supplier_name?: string
+          supplier_sku?: string | null
         }
         Update: {
           order_item_id?: string
           original_price_zar?: number | null
           source_url?: string
           supplier_name?: string
+          supplier_sku?: string | null
         }
         Relationships: [
           {
@@ -1284,6 +1343,7 @@ export type Database = {
           product_id: string
           source_url: string
           supplier_name: string
+          supplier_sku: string | null
           updated_at: string
           updated_by: string | null
         }
@@ -1292,6 +1352,7 @@ export type Database = {
           product_id: string
           source_url?: string
           supplier_name?: string
+          supplier_sku?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -1300,6 +1361,7 @@ export type Database = {
           product_id?: string
           source_url?: string
           supplier_name?: string
+          supplier_sku?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -1319,6 +1381,7 @@ export type Database = {
           ai_risk_score: number | null
           brand: string | null
           catalogue_import_id: string | null
+          catalogue_review_item_id: string | null
           category: string
           checkout_url: string | null
           color: string | null
@@ -1357,6 +1420,7 @@ export type Database = {
           ai_risk_score?: number | null
           brand?: string | null
           catalogue_import_id?: string | null
+          catalogue_review_item_id?: string | null
           category: string
           checkout_url?: string | null
           color?: string | null
@@ -1395,6 +1459,7 @@ export type Database = {
           ai_risk_score?: number | null
           brand?: string | null
           catalogue_import_id?: string | null
+          catalogue_review_item_id?: string | null
           category?: string
           checkout_url?: string | null
           color?: string | null
@@ -1434,6 +1499,13 @@ export type Database = {
             columns: ["catalogue_import_id"]
             isOneToOne: false
             referencedRelation: "catalogue_imports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_catalogue_review_item_id_fkey"
+            columns: ["catalogue_review_item_id"]
+            isOneToOne: false
+            referencedRelation: "catalogue_review_items"
             referencedColumns: ["id"]
           },
           {
@@ -1759,6 +1831,7 @@ export type Database = {
         Row: {
           base_url: string
           configuration: Json
+          connection_mode: string
           connection_status: string
           created_by: string
           id: string
@@ -1774,6 +1847,7 @@ export type Database = {
         Insert: {
           base_url: string
           configuration?: Json
+          connection_mode?: string
           connection_status?: string
           created_by: string
           id?: string
@@ -1789,6 +1863,7 @@ export type Database = {
         Update: {
           base_url?: string
           configuration?: Json
+          connection_mode?: string
           connection_status?: string
           created_by?: string
           id?: string
